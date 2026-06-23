@@ -54,6 +54,7 @@ import { useI18n } from '../i18n/useI18n'
 import { normalizeImageModel, normalizeImageSeries } from '../generation/imageModelRegistry'
 import { DEFAULT_VIDEO_MODEL_ID, getVideoModelById } from '../generation/videoModelRegistry'
 import { createDefaultProductAnalysisNodeData } from './productAnalysisPrompt'
+import { DEFAULT_LLM_MODEL_ID } from '../generation/llmModelRegistry'
 
 const nodeTypes = {
   text: TextNodeComponent,
@@ -405,7 +406,7 @@ export function CanvasRoot() {
           nodeType: 'llm',
           title: t('node.llm'),
           llmProvider: 'openai_compatible',
-          llmModelId: '',
+          llmModelId: DEFAULT_LLM_MODEL_ID,
           mode: 'chat',
           userInput: '',
           conversation: [],

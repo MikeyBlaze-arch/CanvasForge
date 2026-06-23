@@ -8,12 +8,34 @@ import { useCanvasStore } from '../store/canvasStore'
 import { useUIStore } from '../store/uiStore'
 import { normalizeCanvasEdge } from '../store/edgeStore'
 import { getImageModelById, normalizeImageGenSelection } from '../generation/imageModelRegistry'
+import { normalizeLLMModelId } from '../generation/llmModelRegistry'
 import { migrateEdges } from '../canvas/connectionNormalizer'
-import { createDefaultProductAnalysisNodeData } from '../canvas/productAnalysisPrompt'
+import {
+  createDefaultProductAnalysisNodeData,
+  normalizeProductAnalysisCommerceStyle,
+  normalizeProductAnalysisPageCount,
+} from '../canvas/productAnalysisPrompt'
+import type { ProductAnalysisStructuredOutput } from '../canvas/nodeTypes'
 import { db } from './db'
 import type { ProjectData } from '../store/projectStore'
 
 const DEPRECATED_NODE_TYPES = new Set(['prompt_merge', 'camera_control'])
+
+function normalizeStructuredProductAnalysisOutput(value: unknown): ProductAnalysisStructuredOutput | undefined {
+  if (!value || typeof value !== 'object') return undefined
+  const record = value as Record<string, unknown>
+  return {
+    productName: typeof record.productName === 'string' ? record.productName : '',
+    productCategory: typeof record.productCategory === 'string' ? record.productCategory : '',
+    material: typeof record.material === 'string' ? record.material : '',
+    colorStyle: typeof record.colorStyle === 'string' ? record.colorStyle : '',
+    coreFunction: typeof record.coreFunction === 'string' ? record.coreFunction : '',
+    scene: typeof record.scene === 'string' ? record.scene : '',
+    targetAudience: typeof record.targetAudience === 'string' ? record.targetAudience : '',
+    pagePlan: Array.isArray(record.pagePlan) ? record.pagePlan.filter((item): item is string => typeof item === 'string') : [],
+    finalPrompt: typeof record.finalPrompt === 'string' ? record.finalPrompt : '',
+  }
+}
 
 export function serializeProject(): ProjectData {
   const project = useProjectStore.getState().currentProject
@@ -52,6 +74,9 @@ export function deserializeProject(data: ProjectData): void {
         type: 'product_analysis',
         data: {
           ...defaults,
+          commerceStyle: normalizeProductAnalysisCommerceStyle(d.commerceStyle),
+          analysisModel: normalizeLLMModelId(typeof d.analysisModel === 'string' ? d.analysisModel : defaults.analysisModel),
+          pageCount: normalizeProductAnalysisPageCount(d.pageCount),
           productName: typeof d.productName === 'string' ? d.productName : '',
           productCategory: typeof d.productCategory === 'string' ? d.productCategory : '',
           material: typeof d.material === 'string' ? d.material : '',
@@ -60,6 +85,8 @@ export function deserializeProject(data: ProjectData): void {
           scene: typeof d.scene === 'string' ? d.scene : '',
           targetAudience: typeof d.targetAudience === 'string' ? d.targetAudience : '',
           outputRequirement: typeof d.outputRequirement === 'string' ? d.outputRequirement : '',
+          analysisResult: typeof d.analysisResult === 'string' ? d.analysisResult : '',
+          structuredOutput: normalizeStructuredProductAnalysisOutput(d.structuredOutput),
           generatedPrompt: typeof d.generatedPrompt === 'string' ? d.generatedPrompt : '',
           updatedAt: typeof d.updatedAt === 'number' ? d.updatedAt : Date.now(),
         } as CanvasNodeData,
@@ -75,10 +102,13 @@ export function deserializeProject(data: ProjectData): void {
           ...node.data,
           nodeType: 'product_analysis',
           title: typeof d.title === 'string' && d.title ? d.title : defaults.title,
-          analysisModel: typeof d.analysisModel === 'string' && d.analysisModel ? d.analysisModel : defaults.analysisModel,
+          commerceStyle: normalizeProductAnalysisCommerceStyle(d.commerceStyle),
+          analysisModel: normalizeLLMModelId(typeof d.analysisModel === 'string' ? d.analysisModel : defaults.analysisModel),
+          pageCount: normalizeProductAnalysisPageCount(d.pageCount),
           inputText: typeof d.inputText === 'string' ? d.inputText : '',
           generatedPrompt: typeof d.generatedPrompt === 'string' ? d.generatedPrompt : '',
           analysisResult: typeof d.analysisResult === 'string' ? d.analysisResult : '',
+          structuredOutput: normalizeStructuredProductAnalysisOutput(d.structuredOutput),
           isRunning: false,
           error: typeof d.error === 'string' ? d.error : '',
           updatedAt: typeof d.updatedAt === 'number' ? d.updatedAt : Date.now(),
@@ -100,6 +130,15 @@ export function deserializeProject(data: ProjectData): void {
           sizeMode: model?.sizeMode,
           aspectRatio: selection.aspectRatio,
           resolution: selection.resolution,
+        } as CanvasNodeData,
+      }
+    }
+    if (d.nodeType === 'llm') {
+      return {
+        ...node,
+        data: {
+          ...node.data,
+          llmModelId: normalizeLLMModelId(typeof d.llmModelId === 'string' ? d.llmModelId : undefined),
         } as CanvasNodeData,
       }
     }

@@ -6,7 +6,7 @@ import { CompactSelect } from '../../components/Select'
 import { useNodeStore } from '../../store/nodeStore'
 import { useEdgeStore } from '../../store/edgeStore'
 import type { LLMNodeData, TextNodeData } from '../nodeTypes'
-import { LLM_MODEL_REGISTRY } from '../../generation/llmModelRegistry'
+import { LLM_MODEL_REGISTRY, normalizeLLMModelId } from '../../generation/llmModelRegistry'
 import { callLLM } from '../../generation/llmApi'
 import { getLLMInputs } from '../nodeHelpers'
 import { useI18n } from '../../i18n/useI18n'
@@ -16,6 +16,7 @@ export const LLMNodeComponent = React.memo(function LLMNodeComponent({ id, data,
   const updateNodeData = useNodeStore((s) => s.updateNodeData)
   const nodes = useNodeStore((s) => s.nodes)
   const edges = useEdgeStore((s) => s.edges)
+  const llmModelId = normalizeLLMModelId(d.llmModelId)
   const [inputValue, setInputValue] = useState(d.userInput)
   const { t } = useI18n()
 
@@ -40,7 +41,7 @@ export const LLMNodeComponent = React.memo(function LLMNodeComponent({ id, data,
             sourceNodeId: id,
             sourceType: 'llm',
             metadata: {
-              llmModel: d.llmModelId,
+              llmModel: llmModelId,
               llmMode: d.mode,
               inputImages: inputs.imageInputs,
               createdAt: Date.now(),
@@ -50,7 +51,7 @@ export const LLMNodeComponent = React.memo(function LLMNodeComponent({ id, data,
         }
       }
     },
-    [id, d.llmModelId, d.mode, nodes, edges, updateNodeData]
+    [id, llmModelId, d.mode, nodes, edges, updateNodeData]
   )
 
   const handleRun = useCallback(async () => {
@@ -70,7 +71,7 @@ export const LLMNodeComponent = React.memo(function LLMNodeComponent({ id, data,
 
     try {
       const result = await callLLM({
-        modelId: d.llmModelId,
+        modelId: llmModelId,
         messages: [{ role: 'user', content: inputs.inputText }],
         systemPrompt: d.systemPrompt,
         imageUrls: inputs.imageInputs,
@@ -93,9 +94,9 @@ export const LLMNodeComponent = React.memo(function LLMNodeComponent({ id, data,
           : t('llm.failed')
       setField({ status: 'failed', error: msg })
     }
-  }, [id, d, inputValue, nodes, edges, setField, t, writeOutputToTextNodes])
+  }, [id, d, llmModelId, inputValue, nodes, edges, setField, t, writeOutputToTextNodes])
 
-  const currentModelLabel = LLM_MODEL_REGISTRY.find((m) => m.id === d.llmModelId)?.label ?? d.llmModelId
+  const currentModelLabel = LLM_MODEL_REGISTRY.find((m) => m.id === llmModelId)?.label ?? llmModelId
 
   // Check text connection status
   const llmInputs = getLLMInputs(id, nodes, edges, '')
@@ -119,7 +120,7 @@ export const LLMNodeComponent = React.memo(function LLMNodeComponent({ id, data,
       {/* Model select */}
       <div className="node-field">
         <CompactSelect
-          value={d.llmModelId}
+          value={llmModelId}
           onChange={(value) => setField({ llmModelId: value })}
           options={LLM_MODEL_REGISTRY.map((model) => ({ value: model.id, label: model.label }))}
         />

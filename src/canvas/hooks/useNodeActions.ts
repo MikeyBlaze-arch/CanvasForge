@@ -15,6 +15,7 @@ import type {
   VideoGenNodeData,
 } from '../nodeTypes'
 import { DEFAULT_VIDEO_MODEL_ID, getVideoModelById } from '../../generation/videoModelRegistry'
+import { DEFAULT_LLM_MODEL_ID } from '../../generation/llmModelRegistry'
 import { t } from '../../i18n/useI18n'
 import { createDefaultProductAnalysisNodeData } from '../productAnalysisPrompt'
 
@@ -118,7 +119,7 @@ export function useNodeActions() {
           nodeType: 'llm',
           title: t('node.llm'),
           llmProvider: 'openai_compatible',
-          llmModelId: 'gpt-5-5',
+          llmModelId: DEFAULT_LLM_MODEL_ID,
           mode: 'chat',
           userInput: '',
           conversation: [],

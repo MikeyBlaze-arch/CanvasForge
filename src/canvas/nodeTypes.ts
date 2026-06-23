@@ -23,9 +23,9 @@ export type TextNodeData = {
   updatedAt: number
 }
 
-export type ProductAnalysisNodeData = {
-  nodeType: 'product_analysis'
-  title: string
+export type ProductAnalysisCommerceStyle = 'domestic' | 'overseas'
+
+export type ProductAnalysisStructuredOutput = {
   productName: string
   productCategory: string
   material: string
@@ -33,11 +33,28 @@ export type ProductAnalysisNodeData = {
   coreFunction: string
   scene: string
   targetAudience: string
-  outputRequirement: string
+  pagePlan: string[]
+  finalPrompt: string
+}
+
+export type ProductAnalysisNodeData = {
+  nodeType: 'product_analysis'
+  title: string
+  commerceStyle: ProductAnalysisCommerceStyle
   analysisModel: string
+  pageCount: number
+  productName: string
+  productCategory: string
+  material: string
+  colorStyle: string
+  coreFunction: string
+  scene: string
+  targetAudience: string
   inputText: string
   generatedPrompt: string
-  analysisResult: string
+  structuredOutput?: ProductAnalysisStructuredOutput
+  outputRequirement?: string
+  analysisResult?: string
   isRunning: boolean
   error?: string
   updatedAt: number

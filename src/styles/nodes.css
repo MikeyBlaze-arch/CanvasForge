@@ -581,10 +581,51 @@
   gap: 10px;
 }
 
-.product-analysis-model {
+.product-analysis-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  gap: 8px;
+  align-items: end;
+}
+
+.product-analysis-control,
+.product-analysis-page-row {
   display: flex;
+  min-width: 0;
   flex-direction: column;
   gap: 4px;
+}
+
+.product-analysis-style-toggle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+}
+
+.product-analysis-style-button {
+  min-width: 0;
+  height: 32px;
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-sm);
+  background: var(--field-bg);
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 11px;
+  line-height: 1.2;
+  padding: 0 6px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+
+.product-analysis-style-button:hover {
+  border-color: var(--border-focus);
+  color: var(--text-primary);
+}
+
+.product-analysis-style-button.selected {
+  border-color: rgba(20, 184, 166, 0.75);
+  background: rgba(20, 184, 166, 0.16);
+  color: var(--text-primary);
 }
 
 .product-analysis-fields {
@@ -633,30 +674,6 @@ textarea.product-analysis-input {
   color: var(--accent-red);
   font-size: 11px;
   line-height: 1.4;
-}
-
-.product-analysis-output {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  padding-top: 2px;
-}
-
-.product-analysis-output-title {
-  font-size: 10px;
-  color: var(--text-muted);
-  font-weight: 500;
-}
-
-.product-analysis-output-text {
-  min-height: 88px;
-  max-height: 160px;
-  resize: none;
-  border: 1px solid var(--border-primary);
-  border-radius: var(--radius-sm);
-  background: var(--field-bg);
-  color: var(--text-primary);
-  padding: 8px;
 }
 
 .node-card[data-node-type="text"] .node-card-body {

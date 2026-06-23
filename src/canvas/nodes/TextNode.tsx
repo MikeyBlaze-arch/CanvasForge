@@ -135,10 +135,10 @@ export const TextNodeComponent = React.memo(function TextNodeComponent({ id, dat
   }, [activeSize.width, activeSize.height, id, updateNodeData])
 
   useEffect(() => {
-    if (!isEditing && !modalOpen && !isComposingRef.current) {
-      setEditValue(d.content)
-    }
-  }, [d.content, isEditing, modalOpen])
+    if (isComposingRef.current) return
+    setEditValue(d.content)
+    setModalValue(d.content)
+  }, [d.content])
 
   const commitText = useCallback((value = editValue) => {
     updateNodeData(id, { content: value, updatedAt: Date.now() } as Partial<TextNodeData>)

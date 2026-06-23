@@ -5,11 +5,20 @@ import { PortLabel } from '../../components/PortLabel'
 import { CompactSelect } from '../../components/Select'
 import { useEdgeStore } from '../../store/edgeStore'
 import { useNodeStore } from '../../store/nodeStore'
-import { LLM_MODEL_REGISTRY } from '../../generation/llmModelRegistry'
+import { LLM_MODEL_REGISTRY, normalizeLLMModelId } from '../../generation/llmModelRegistry'
 import { callLLM } from '../../generation/llmApi'
 import { useI18n } from '../../i18n/useI18n'
-import type { ProductAnalysisNodeData, TextNodeData } from '../nodeTypes'
-import { buildProductAnalysisPrompt, getDefaultAnalysisModel } from '../productAnalysisPrompt'
+import type { ProductAnalysisCommerceStyle, ProductAnalysisNodeData, TextNodeData } from '../nodeTypes'
+import {
+  PRODUCT_ANALYSIS_INVALID_JSON_ERROR,
+  PRODUCT_ANALYSIS_PAGE_COUNT_OPTIONS,
+  buildProductAnalysisPrompt,
+  formatProductAnalysisOutput,
+  getDefaultAnalysisModel,
+  normalizeProductAnalysisCommerceStyle,
+  normalizeProductAnalysisPageCount,
+  parseProductAnalysisStructuredOutput,
+} from '../productAnalysisPrompt'
 import { getProductAnalysisInputs } from '../nodeHelpers'
 
 type ProductAnalysisField = keyof Pick<
@@ -21,7 +30,6 @@ type ProductAnalysisField = keyof Pick<
   | 'coreFunction'
   | 'scene'
   | 'targetAudience'
-  | 'outputRequirement'
 >
 
 const FIELD_KEYS: Array<{ field: ProductAnalysisField; labelKey: string; multiline?: boolean }> = [
@@ -32,7 +40,6 @@ const FIELD_KEYS: Array<{ field: ProductAnalysisField; labelKey: string; multili
   { field: 'coreFunction', labelKey: 'productAnalysis.coreFunction', multiline: true },
   { field: 'scene', labelKey: 'productAnalysis.scene', multiline: true },
   { field: 'targetAudience', labelKey: 'productAnalysis.targetAudience' },
-  { field: 'outputRequirement', labelKey: 'productAnalysis.outputRequirement', multiline: true },
 ]
 
 export const ProductAnalysisNodeComponent = React.memo(function ProductAnalysisNodeComponent({ id, data, selected }: NodeProps) {
@@ -56,25 +63,51 @@ export const ProductAnalysisNodeComponent = React.memo(function ProductAnalysisN
     [id, updateNodeData],
   )
 
+  const setCommerceStyle = useCallback(
+    (commerceStyle: ProductAnalysisCommerceStyle) => {
+      updateNodeData(id, { commerceStyle, updatedAt: Date.now() } as Partial<ProductAnalysisNodeData>)
+    },
+    [id, updateNodeData],
+  )
+
+  const setPageCount = useCallback(
+    (value: string) => {
+      updateNodeData(id, {
+        pageCount: normalizeProductAnalysisPageCount(value),
+        updatedAt: Date.now(),
+      } as Partial<ProductAnalysisNodeData>)
+    },
+    [id, updateNodeData],
+  )
+
   const writeResultToConnectedTextNodes = useCallback(
-    (analysisResult: string, analysisModel: string) => {
-      const inputs = getProductAnalysisInputs(id, nodes, edges)
+    (
+      formattedOutput: string,
+      analysisModel: string,
+      commerceStyle: ProductAnalysisCommerceStyle,
+      pageCount: number,
+    ) => {
+      const latestNodes = useNodeStore.getState().nodes
+      const latestEdges = useEdgeStore.getState().edges
+      const inputs = getProductAnalysisInputs(id, latestNodes, latestEdges)
 
       for (const { nodeId } of inputs.connectedOutputTextNodes) {
         updateNodeData(nodeId, {
-          content: analysisResult,
+          content: formattedOutput,
           sourceNodeId: id,
           sourceType: 'product_analysis',
           metadata: {
             source: 'product_analysis',
             analysisModel,
+            commerceStyle,
+            pageCount,
             createdAt: Date.now(),
           },
           updatedAt: Date.now(),
         } as Partial<TextNodeData>)
       }
     },
-    [id, nodes, edges, updateNodeData],
+    [id, updateNodeData],
   )
 
   const handleRunAnalysis = useCallback(async () => {
@@ -83,17 +116,35 @@ export const ProductAnalysisNodeComponent = React.memo(function ProductAnalysisN
     const inputs = getProductAnalysisInputs(id, nodes, edges)
     const inputText = inputs.inputText
     const imageInputs = inputs.imageInputs
-    const analysisModel = d.analysisModel || getDefaultAnalysisModel()
+    const analysisModel = normalizeLLMModelId(d.analysisModel || getDefaultAnalysisModel())
+    const commerceStyle = normalizeProductAnalysisCommerceStyle(d.commerceStyle)
+    const pageCount = normalizeProductAnalysisPageCount(d.pageCount)
+    const hasCurrentFields = FIELD_KEYS.some((item) => String(d[item.field] || '').trim())
+
+    if (!inputText.trim() && imageInputs.length === 0 && !hasCurrentFields) {
+      updateNodeData(id, {
+        analysisModel,
+        commerceStyle,
+        pageCount,
+        isRunning: false,
+        error: t('productAnalysis.error.missingInput'),
+        updatedAt: Date.now(),
+      } as Partial<ProductAnalysisNodeData>)
+      return
+    }
+
     const generatedPrompt = buildProductAnalysisPrompt(
-      { ...d, analysisModel, inputText },
+      { ...d, analysisModel, commerceStyle, pageCount, inputText },
       inputText,
     )
     const requestPrompt = imageInputs.length > 0
-      ? `${generatedPrompt}\n\n【已连接产品图片】\n请结合随消息提供的 ${imageInputs.length} 张产品图片进行卖点分析。`
+      ? `${generatedPrompt}\n\n【已连接产品图片】\n请结合随消息提供的 ${imageInputs.length} 张产品图片进行卖点分析。仍然只能返回 JSON 对象，不要返回 JSON 以外的内容。`
       : generatedPrompt
 
     updateNodeData(id, {
       analysisModel,
+      commerceStyle,
+      pageCount,
       inputText,
       generatedPrompt: requestPrompt,
       isRunning: true,
@@ -102,31 +153,53 @@ export const ProductAnalysisNodeComponent = React.memo(function ProductAnalysisN
     } as Partial<ProductAnalysisNodeData>)
 
     try {
-      const analysisResult = await callLLM({
+      const rawResponse = await callLLM({
         modelId: analysisModel,
         messages: [{ role: 'user', content: requestPrompt }],
         imageUrls: imageInputs,
       })
 
+      const structuredOutput = parseProductAnalysisStructuredOutput(rawResponse, pageCount)
+      const formattedOutput = formatProductAnalysisOutput(structuredOutput, pageCount)
+
       updateNodeData(id, {
-        analysisResult,
+        productName: structuredOutput.productName,
+        productCategory: structuredOutput.productCategory,
+        material: structuredOutput.material,
+        colorStyle: structuredOutput.colorStyle,
+        coreFunction: structuredOutput.coreFunction,
+        scene: structuredOutput.scene,
+        targetAudience: structuredOutput.targetAudience,
+        structuredOutput,
+        analysisResult: formattedOutput,
         isRunning: false,
         error: '',
         updatedAt: Date.now(),
       } as Partial<ProductAnalysisNodeData>)
-      writeResultToConnectedTextNodes(analysisResult, analysisModel)
-    } catch {
+      writeResultToConnectedTextNodes(formattedOutput, analysisModel, commerceStyle, pageCount)
+    } catch (error) {
       updateNodeData(id, {
         isRunning: false,
-        error: t('productAnalysis.error'),
+        error: error instanceof Error && error.message === PRODUCT_ANALYSIS_INVALID_JSON_ERROR
+          ? PRODUCT_ANALYSIS_INVALID_JSON_ERROR
+          : t('productAnalysis.error'),
         updatedAt: Date.now(),
       } as Partial<ProductAnalysisNodeData>)
     }
   }, [id, d, nodes, edges, updateNodeData, t, writeResultToConnectedTextNodes])
 
-  const analysisModel = d.analysisModel || getDefaultAnalysisModel()
+  const analysisModel = normalizeLLMModelId(d.analysisModel || getDefaultAnalysisModel())
+  const commerceStyle = normalizeProductAnalysisCommerceStyle(d.commerceStyle)
+  const pageCount = normalizeProductAnalysisPageCount(d.pageCount)
   const inputs = getProductAnalysisInputs(id, nodes, edges)
   const hasInput = inputs.connectedInputTextNodeCount + inputs.connectedInputImageNodeCount > 0
+  const actionLabel = d.isRunning
+    ? t('productAnalysis.running')
+    : d.error
+      ? t('productAnalysis.failed')
+      : d.structuredOutput
+        ? t('productAnalysis.done')
+        : t('productAnalysis.run')
 
   return (
     <NodeShell
@@ -142,16 +215,46 @@ export const ProductAnalysisNodeComponent = React.memo(function ProductAnalysisN
           onClick={handleRunAnalysis}
           disabled={d.isRunning}
         >
-          {d.isRunning ? t('productAnalysis.running') : t('productAnalysis.run')}
+          {actionLabel}
         </button>
       }
     >
-      <div className="product-analysis-model nodrag nopan nowheel">
-        <span className="node-field-label">{t('productAnalysis.analysisModel')}</span>
+      <div className="product-analysis-controls nodrag nopan nowheel">
+        <div className="product-analysis-control">
+          <span className="node-field-label">{t('productAnalysis.commerceStyle')}</span>
+          <div className="product-analysis-style-toggle">
+            {(['domestic', 'overseas'] as ProductAnalysisCommerceStyle[]).map((style) => (
+              <button
+                key={style}
+                type="button"
+                className={`product-analysis-style-button ${commerceStyle === style ? 'selected' : ''}`}
+                onClick={() => setCommerceStyle(style)}
+                onMouseDown={(event) => event.stopPropagation()}
+              >
+                {style === 'domestic' ? t('productAnalysis.domesticStyle') : t('productAnalysis.overseasStyle')}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="product-analysis-control">
+          <span className="node-field-label">{t('productAnalysis.analysisModel')}</span>
+          <CompactSelect
+            value={analysisModel}
+            onChange={setAnalysisModel}
+            options={LLM_MODEL_REGISTRY.map((model) => ({ value: model.id, label: model.label }))}
+          />
+        </div>
+      </div>
+
+      <div className="product-analysis-page-row nodrag nopan nowheel">
+        <span className="node-field-label">{t('productAnalysis.pageCount')}</span>
         <CompactSelect
-          value={analysisModel}
-          onChange={setAnalysisModel}
-          options={LLM_MODEL_REGISTRY.map((model) => ({ value: model.id, label: model.label }))}
+          value={String(pageCount)}
+          onChange={setPageCount}
+          options={PRODUCT_ANALYSIS_PAGE_COUNT_OPTIONS.map((count) => ({
+            value: String(count),
+            label: `${count}${t('productAnalysis.pageUnit')}`,
+          }))}
         />
       </div>
 
@@ -165,8 +268,8 @@ export const ProductAnalysisNodeComponent = React.memo(function ProductAnalysisN
             <span className="node-field-label">{t(item.labelKey)}</span>
             {item.multiline ? (
               <textarea
-                rows={item.field === 'outputRequirement' ? 3 : 2}
-                value={d[item.field]}
+                rows={2}
+                value={d[item.field] ?? ''}
                 onChange={(event) => setField(item.field, event.target.value)}
                 className="cf-textarea product-analysis-input"
                 onMouseDown={(event) => event.stopPropagation()}
@@ -174,7 +277,7 @@ export const ProductAnalysisNodeComponent = React.memo(function ProductAnalysisN
               />
             ) : (
               <input
-                value={d[item.field]}
+                value={d[item.field] ?? ''}
                 onChange={(event) => setField(item.field, event.target.value)}
                 className="product-analysis-input"
                 onMouseDown={(event) => event.stopPropagation()}
@@ -186,19 +289,6 @@ export const ProductAnalysisNodeComponent = React.memo(function ProductAnalysisN
       </div>
 
       {d.error && <div className="product-analysis-error">{d.error}</div>}
-
-      <div className="product-analysis-output">
-        <div className="product-analysis-output-title">{t('productAnalysis.analysisResult')}</div>
-        <textarea
-          value={d.analysisResult}
-          readOnly
-          rows={6}
-          className="cf-textarea product-analysis-output-text nodrag nopan nowheel"
-          placeholder={t('productAnalysis.resultPlaceholder')}
-          onMouseDown={(event) => event.stopPropagation()}
-          onClick={(event) => event.stopPropagation()}
-        />
-      </div>
 
       <div className="node-ports">
         <div className="node-port-group">

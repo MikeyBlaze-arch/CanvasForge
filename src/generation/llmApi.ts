@@ -1,5 +1,6 @@
 import { getLlmApiUrl, getApiKey, getAuthHeaders } from '../store/apiSettingsStore'
 import { buildLLMPayload } from './llmPayloadBuilder'
+import { normalizeLLMModelId } from './llmModelRegistry'
 
 type SimpleMessage = {
   role: 'system' | 'user' | 'assistant'
@@ -21,7 +22,10 @@ export async function callLLM(input: CallInput): Promise<string> {
   }
 
   const url = getLlmApiUrl()
-  const payload = buildLLMPayload(input)
+  const payload = buildLLMPayload({
+    ...input,
+    modelId: normalizeLLMModelId(input.modelId),
+  })
 
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',

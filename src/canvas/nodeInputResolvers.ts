@@ -7,6 +7,7 @@ import type {
   ResultImageNodeData,
   TextNodeData,
 } from './nodeTypes'
+import { formatProductAnalysisOutput, normalizeProductAnalysisPageCount } from './productAnalysisPrompt'
 import { resolveHandleId } from './connectionRules'
 import {
   IMAGE_COLLECTION_OUTPUT_HANDLE,
@@ -114,7 +115,16 @@ function sortByConnectionOrder<T extends NodeMatch>(matches: T[]): T[] {
 
 function getTextOutput(data: CanvasNodeData): string {
   if (data.nodeType === 'text') return (data as TextNodeData).content.trim()
-  if (data.nodeType === 'product_analysis') return (data as ProductAnalysisNodeData).analysisResult.trim()
+  if (data.nodeType === 'product_analysis') {
+    const productAnalysisData = data as ProductAnalysisNodeData
+    if (productAnalysisData.structuredOutput) {
+      return formatProductAnalysisOutput(
+        productAnalysisData.structuredOutput,
+        normalizeProductAnalysisPageCount(productAnalysisData.pageCount),
+      )
+    }
+    return (productAnalysisData.analysisResult || '').trim()
+  }
   if (data.nodeType === 'llm') return ((data as unknown as { outputText?: string }).outputText || '').trim()
   return ''
 }

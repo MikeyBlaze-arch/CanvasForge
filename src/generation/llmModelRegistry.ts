@@ -29,6 +29,13 @@ export const LLM_MODEL_REGISTRY: LLMModelConfig[] = [
   },
 ]
 
+export const DEFAULT_LLM_MODEL_ID = LLM_MODEL_REGISTRY[0]?.id ?? ''
+
 export function getLLMModelConfig(modelId: string): LLMModelConfig | undefined {
   return LLM_MODEL_REGISTRY.find(m => m.id === modelId)
+}
+
+export function normalizeLLMModelId(modelId?: string | null): string {
+  if (modelId && getLLMModelConfig(modelId)) return modelId
+  return DEFAULT_LLM_MODEL_ID
 }

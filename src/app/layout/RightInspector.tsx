@@ -3,7 +3,7 @@ import { useNodeStore } from '../../store/nodeStore'
 import type { CanvasNodeData, TextNodeData, ImageGenNodeData, LLMNodeData, ImageAssetNodeData, TextKind } from '../../canvas/nodeTypes'
 import { DEFAULT_MODEL_BY_SERIES, getModelsForSeries, getModelsGroupedByCategory, IMAGE_SERIES, getModelSupportedResolutions, getModelSupportedAspectRatios, type ImageModelDefinition, type ImageModelSeries } from '../../generation/imageModelRegistry'
 import { resolveGptImage2FixedSize } from '../../generation/sizeRegistry'
-import { LLM_MODEL_REGISTRY } from '../../generation/llmModelRegistry'
+import { LLM_MODEL_REGISTRY, normalizeLLMModelId } from '../../generation/llmModelRegistry'
 import { useI18n } from '../../i18n/useI18n'
 
 export function RightInspector() {
@@ -164,6 +164,7 @@ function ImageGenInspectorSections({ id, data, onUpdate }: { id: string; data: I
 
 function LLMInspectorSections({ id, data, onUpdate }: { id: string; data: LLMNodeData; onUpdate: (id: string, patch: Partial<CanvasNodeData>) => void }) {
   const { t } = useI18n()
+  const llmModelId = normalizeLLMModelId(data.llmModelId)
 
   return (
     <>
@@ -171,7 +172,7 @@ function LLMInspectorSections({ id, data, onUpdate }: { id: string; data: LLMNod
         <div className="inspector-section-header">{t('panel.model')}</div>
         <div className="inspector-field">
           <label className="inspector-field-label">{t('inspector.llm')}</label>
-          <select value={data.llmModelId} onChange={(e) => onUpdate(id, { llmModelId: e.target.value } as Partial<LLMNodeData>)}>
+          <select value={llmModelId} onChange={(e) => onUpdate(id, { llmModelId: e.target.value } as Partial<LLMNodeData>)}>
             {LLM_MODEL_REGISTRY.map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}
           </select>
         </div>

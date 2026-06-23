@@ -1,6 +1,7 @@
 import { createNodeId } from '../store/nodeStore'
 import type { CanvasNodeData, TextNodeData, ImageAssetNodeData, ImageGenNodeData, VideoAssetNodeData, MotionTransferNodeData } from '../canvas/nodeTypes'
 import { t } from '../i18n/useI18n'
+import { DEFAULT_LLM_MODEL_ID } from '../generation/llmModelRegistry'
 
 export type WorkflowTemplate = {
   id: string
@@ -95,7 +96,7 @@ export const TEMPLATES: WorkflowTemplate[] = [
       return {
         nodes: [
           { id: t1, type: 'text', position: { x: 200, y: 80 }, data: { nodeType: 'text', title: t('node.idea'), textKind: 'prompt', content: '', language: 'mixed', updatedAt: Date.now() } as TextNodeData },
-          { id: llm, type: 'llm', position: { x: 500, y: 80 }, data: { nodeType: 'llm', title: t('node.llm'), llmProvider: 'openai_compatible', llmModelId: 'gpt-5-5', mode: 'chat', userInput: 'Expand into detailed image prompt:', conversation: [], status: 'idle', createdAt: Date.now(), updatedAt: Date.now() } },
+          { id: llm, type: 'llm', position: { x: 500, y: 80 }, data: { nodeType: 'llm', title: t('node.llm'), llmProvider: 'openai_compatible', llmModelId: DEFAULT_LLM_MODEL_ID, mode: 'chat', userInput: 'Expand into detailed image prompt:', conversation: [], status: 'idle', createdAt: Date.now(), updatedAt: Date.now() } },
           { id: t2, type: 'text', position: { x: 800, y: 80 }, data: { nodeType: 'text', title: t('node.enhanced'), textKind: 'prompt', content: '', language: 'mixed', updatedAt: Date.now() } as TextNodeData },
           { id: gen, type: 'image_gen', position: { x: 500, y: 360 }, data: { nodeType: 'image_gen', title: t('node.imageGen'), modelSeries: 'G', modelId: 'g-gpt-image-2', aspectRatio: '16:9', resolution: '2K', batchSize: 1, promptInput: '', status: 'idle', createdAt: Date.now(), updatedAt: Date.now() } as ImageGenNodeData },
           { id: out, type: 'image_asset', position: { x: 800, y: 360 }, data: { nodeType: 'image_asset', title: t('node.output'), imageUrl: '', role: 'unknown', createdAt: Date.now(), updatedAt: Date.now() } as ImageAssetNodeData },

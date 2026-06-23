@@ -15,7 +15,13 @@ import { migrateHistoryItems } from '../../history/historyMigration.ts'
 import { getImageGenInputs, getLLMInputs, getProductAnalysisInputs } from '../../canvas/nodeInputResolvers.ts'
 import { resolveGroupImageOutputs } from '../../canvas/groupImageOutputs.ts'
 import { isConnectionAllowed } from '../../canvas/connectionRules.ts'
-import { buildProductAnalysisPrompt, createDefaultProductAnalysisNodeData } from '../../canvas/productAnalysisPrompt.ts'
+import {
+  buildProductAnalysisPrompt,
+  createDefaultProductAnalysisNodeData,
+  formatProductAnalysisOutput,
+  parseProductAnalysisStructuredOutput,
+} from '../../canvas/productAnalysisPrompt.ts'
+import { DEFAULT_LLM_MODEL_ID, normalizeLLMModelId } from '../llmModelRegistry.ts'
 import type { CanvasNodeData } from '../../canvas/nodeTypes.ts'
 
 function assert(condition: unknown, message: string): asserts condition {
@@ -491,13 +497,43 @@ const productAnalysisData = {
   scene: '办公室、书房、床头',
   targetAudience: '上班族、学生、夜间阅读人群',
 }
+assertEqual(productAnalysisData.analysisModel, DEFAULT_LLM_MODEL_ID, 'product analysis uses the same default model as llm nodes')
+assertEqual(productAnalysisData.commerceStyle, 'domestic', 'product analysis defaults to domestic commerce style')
+assertEqual(productAnalysisData.pageCount, 5, 'product analysis defaults to five pages')
+assertEqual(normalizeLLMModelId('legacy-missing-model'), DEFAULT_LLM_MODEL_ID, 'unknown llm model ids fall back to the shared default')
 const productAnalysisPrompt = buildProductAnalysisPrompt(productAnalysisData, '上游信息：支持一机多用')
-assert(productAnalysisPrompt.includes('你是一个电商产品卖点分析和图片生成提示词专家。'), 'product analysis prompt includes role')
-assert(productAnalysisPrompt.includes('【上游输入信息】'), 'product analysis prompt includes upstream section')
+assert(productAnalysisPrompt.includes('你必须只返回一个 JSON 对象。'), 'product analysis prompt requires json-only output')
+assert(productAnalysisPrompt.includes('【电商风格】'), 'product analysis prompt includes commerce style section')
+assert(productAnalysisPrompt.includes('国内电商风格'), 'product analysis prompt uses the default domestic commerce style')
+assert(productAnalysisPrompt.includes('【页数】\n5'), 'product analysis prompt includes default page count')
 assert(productAnalysisPrompt.includes('上游信息：支持一机多用'), 'product analysis prompt includes upstream text')
 assert(productAnalysisPrompt.includes('产品名称：恒温杯'), 'product analysis prompt includes product name')
-assert(productAnalysisPrompt.includes('请提炼适合电商主图、详情页首屏、广告图和社媒营销图使用的核心卖点'), 'product analysis prompt uses default output requirement')
-assert(productAnalysisPrompt.includes('5. 负面提示词'), 'product analysis prompt keeps required output structure')
+assert(productAnalysisPrompt.includes('"pagePlan"'), 'product analysis prompt asks for pagePlan json')
+assert(productAnalysisPrompt.includes('"finalPrompt"'), 'product analysis prompt asks for finalPrompt json')
+
+const parsedProductAnalysis = parseProductAnalysisStructuredOutput(
+  `<think>先分析，但这段应该被清理</think>
+\`\`\`json
+{
+  "productName": "恒温杯",
+  "productCategory": "智能家居",
+  "material": "陶瓷内胆 / 恒温底座",
+  "colorStyle": "奶白色 / 极简风",
+  "coreFunction": "长时间保持饮品温热",
+  "scene": "办公室、书房、床头",
+  "targetAudience": "上班族、学生、夜间阅读人群",
+  "pagePlan": ["主视觉核心卖点", "功能展示"],
+  "finalPrompt": "奶白色恒温杯置于办公桌上，干净电商主图"
+}
+\`\`\``,
+  5,
+)
+assertEqual(parsedProductAnalysis.pagePlan.length, 5, 'product analysis parser pads pagePlan to selected page count')
+assertEqual(parsedProductAnalysis.productName, '恒温杯', 'product analysis parser extracts productName')
+const formattedProductAnalysis = formatProductAnalysisOutput(parsedProductAnalysis, 5)
+assert(formattedProductAnalysis.includes('【产品卖点分析】'), 'product analysis formatter includes title')
+assert(formattedProductAnalysis.includes('【5页页面规划】'), 'product analysis formatter includes selected page count')
+assert(formattedProductAnalysis.includes('【图片生成提示词】'), 'product analysis formatter includes image prompt section')
 assert(
   isConnectionAllowed({
     sourceType: 'text',
@@ -633,7 +669,8 @@ const productAnalysisLLMInputs = getLLMInputs(
       position: { x: 0, y: 0 },
       data: {
         ...productAnalysisData,
-        analysisResult: '图片生成提示词：奶白色恒温杯置于办公桌上',
+        structuredOutput: parsedProductAnalysis,
+        analysisResult: '旧版分析结果不应优先输出',
       },
     },
     {
@@ -660,6 +697,6 @@ const productAnalysisLLMInputs = getLLMInputs(
   ''
 )
 assertEqual(productAnalysisLLMInputs.connectedTextNodeCount, 1, 'llm counts connected product analysis as text input')
-assertEqual(productAnalysisLLMInputs.inputText, '图片生成提示词：奶白色恒温杯置于办公桌上', 'llm reads analysis result from product analysis')
+assertEqual(productAnalysisLLMInputs.inputText, formattedProductAnalysis, 'llm reads formatted structured output from product analysis')
 
 console.info('[image-model-system-test] all assertions passed')

@@ -180,7 +180,7 @@ export function useCanvasShortcuts() {
           let maxY = -Infinity
           const NODE_SIZE_FALLBACK: Record<string, { width: number; height: number }> = {
             text: { width: 210, height: 184 },
-            product_analysis: { width: 330, height: 620 },
+            product_analysis: { width: 330, height: 520 },
             image_asset: { width: 210, height: 178 },
             image_gen: { width: 260, height: 262 },
             llm: { width: 280, height: 292 },
