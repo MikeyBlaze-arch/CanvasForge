@@ -12,7 +12,7 @@ export const LLM_MODEL_REGISTRY: LLMModelConfig[] = [
   {
     id: 'gpt-5-5',
     label: 'GPT-5.5',
-    backendModel: 'R-gpt-5.5',
+    backendModel: 'G-gpt-5.5',
     provider: 'openai_compatible',
     supportsVision: true,
     supportsSystemPrompt: true,

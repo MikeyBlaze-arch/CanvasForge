@@ -77,7 +77,7 @@ function removeLS(key: string): void {
  * automatically on startup — users never have to clear localStorage by hand
  * after an update (important for packaged installer users).
  */
-export const MODEL_REGISTRY_VERSION = 'canvasforge-model-registry-2026-06-v3'
+export const MODEL_REGISTRY_VERSION = 'canvasforge-model-registry-2026-06-v4'
 
 const LS_KEY_AVAILABLE_MODELS_VERSION = 'canvasforge.api.availableModels.version'
 const LS_KEY_AVAILABLE_MODELS_UPDATED_AT = 'canvasforge.api.availableModels.updatedAt'

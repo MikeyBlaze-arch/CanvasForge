@@ -8,6 +8,7 @@ import { useEdgeStore } from '../../store/edgeStore'
 import type { LLMNodeData, TextNodeData } from '../nodeTypes'
 import { LLM_MODEL_REGISTRY, normalizeLLMModelId } from '../../generation/llmModelRegistry'
 import { callLLM } from '../../generation/llmApi'
+import { formatLLMError } from '../../generation/llmErrors'
 import { getLLMInputs } from '../nodeHelpers'
 import { useI18n } from '../../i18n/useI18n'
 
@@ -87,12 +88,7 @@ export const LLMNodeComponent = React.memo(function LLMNodeComponent({ id, data,
       // Write output to connected TextNodes (or auto-create one)
       writeOutputToTextNodes(result)
     } catch (err: unknown) {
-      const msg = err instanceof Error && err.message === 'MISSING_API_KEY'
-        ? t('llm.error.missingApiKey')
-        : err instanceof Error && err.message === 'MISSING_API_BASE_URL'
-          ? t('llm.error.missingApiBaseUrl')
-          : t('llm.failed')
-      setField({ status: 'failed', error: msg })
+      setField({ status: 'failed', error: formatLLMError(err, t, 'llm.failed') })
     }
   }, [id, d, llmModelId, inputValue, nodes, edges, setField, t, writeOutputToTextNodes])
 

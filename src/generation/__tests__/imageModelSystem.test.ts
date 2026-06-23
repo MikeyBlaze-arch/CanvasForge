@@ -8,6 +8,8 @@ import {
 } from '../imageModelRegistry.ts'
 import { buildImageGenerationPayload } from '../imagePayloadBuilder.ts'
 import { buildImageGenerationRequest } from '../imageRequestAdapter.ts'
+import { extractLLMResponseContent } from '../llmApi.ts'
+import { buildLLMPayload } from '../llmPayloadBuilder.ts'
 import { parseImageGenerationResponse } from '../imageResponseParser.ts'
 import { buildSingleImagePayload } from '../scheduler/imageGenerationQueue.ts'
 import { formatAspectRatioLabel, normalizeAspectRatio, normalizeAspectRatioOptionValue } from '../sizeRegistry.ts'
@@ -501,6 +503,36 @@ assertEqual(productAnalysisData.analysisModel, DEFAULT_LLM_MODEL_ID, 'product an
 assertEqual(productAnalysisData.commerceStyle, 'domestic', 'product analysis defaults to domestic commerce style')
 assertEqual(productAnalysisData.pageCount, 5, 'product analysis defaults to five pages')
 assertEqual(normalizeLLMModelId('legacy-missing-model'), DEFAULT_LLM_MODEL_ID, 'unknown llm model ids fall back to the shared default')
+const gptLLMPayload = buildLLMPayload({
+  modelId: 'gpt-5-5',
+  messages: [{ role: 'user', content: 'hello' }],
+})
+assertEqual(gptLLMPayload.model, 'G-gpt-5.5', 'GPT LLM backend model must use G-gpt-5.5')
+const geminiLLMPayload = buildLLMPayload({
+  modelId: 'gemini-3-1-pro',
+  messages: [{ role: 'user', content: 'hello' }],
+})
+assertEqual(geminiLLMPayload.model, 'G-gemini-3.1-pro', 'Gemini LLM backend model must use G-gemini-3.1-pro')
+assertEqual(
+  extractLLMResponseContent({ choices: [{ message: { content: [{ type: 'text', text: 'content parts text' }] } }] }),
+  'content parts text',
+  'llm parser reads OpenAI content parts arrays'
+)
+assertEqual(
+  extractLLMResponseContent({ choices: [{ text: 'legacy choice text' }] }),
+  'legacy choice text',
+  'llm parser reads choices[0].text fallback'
+)
+assertEqual(
+  extractLLMResponseContent({ output: [{ type: 'message', content: [{ type: 'output_text', text: 'responses output text' }] }] }),
+  'responses output text',
+  'llm parser reads responses-style output content'
+)
+assertEqual(
+  extractLLMResponseContent({ candidates: [{ content: { parts: [{ text: 'gemini candidate text' }] } }] }),
+  'gemini candidate text',
+  'llm parser reads gemini candidate text'
+)
 const productAnalysisPrompt = buildProductAnalysisPrompt(productAnalysisData, '上游信息：支持一机多用')
 assert(productAnalysisPrompt.includes('你必须只返回一个 JSON 对象。'), 'product analysis prompt requires json-only output')
 assert(productAnalysisPrompt.includes('【电商风格】'), 'product analysis prompt includes commerce style section')

@@ -7,6 +7,7 @@ import { useEdgeStore } from '../../store/edgeStore'
 import { useNodeStore } from '../../store/nodeStore'
 import { LLM_MODEL_REGISTRY, normalizeLLMModelId } from '../../generation/llmModelRegistry'
 import { callLLM } from '../../generation/llmApi'
+import { formatLLMError } from '../../generation/llmErrors'
 import { useI18n } from '../../i18n/useI18n'
 import type { ProductAnalysisCommerceStyle, ProductAnalysisNodeData, TextNodeData } from '../nodeTypes'
 import {
@@ -182,7 +183,7 @@ export const ProductAnalysisNodeComponent = React.memo(function ProductAnalysisN
         isRunning: false,
         error: error instanceof Error && error.message === PRODUCT_ANALYSIS_INVALID_JSON_ERROR
           ? PRODUCT_ANALYSIS_INVALID_JSON_ERROR
-          : t('productAnalysis.error'),
+          : formatLLMError(error, t, 'productAnalysis.error'),
         updatedAt: Date.now(),
       } as Partial<ProductAnalysisNodeData>)
     }
