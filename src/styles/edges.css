@@ -1,0 +1,119 @@
+.canvas-edge-path {
+  fill: none;
+  stroke: var(--edge-default);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  pointer-events: none;
+  transition: stroke 0.15s ease, stroke-width 0.15s ease;
+}
+
+/* Soft brighten on the base line when an edge is flowing (selected edge, or
+   connected to a selected/running node). Kept dim — the real highlight lives
+   on the gradient sweep band, not the base stroke. */
+.canvas-edge-path.flowing {
+  stroke: rgba(185, 190, 194, 0.72);
+  stroke-width: 1.95;
+}
+
+.canvas-edge-hit-path {
+  fill: none;
+  stroke: transparent;
+  stroke-width: 18;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  cursor: pointer;
+}
+
+.react-flow__edge:hover .canvas-edge-path {
+  stroke: var(--edge-hover);
+  stroke-width: 2;
+}
+
+.canvas-edge-path.selected,
+.react-flow__edge.selected .canvas-edge-path {
+  stroke: rgba(205, 210, 214, 0.72);
+  stroke-width: 2.05;
+}
+
+.canvas-edge-delete {
+  position: absolute;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--bg-edge-action);
+  border: 1px solid var(--border-strong);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-floating);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease, background 0.15s ease;
+  will-change: transform;
+  z-index: 20;
+}
+
+.react-flow__edge:hover .canvas-edge-delete,
+.canvas-edge-delete.visible {
+  opacity: 1;
+  pointer-events: all;
+}
+
+.canvas-edge-delete:hover {
+  background: var(--bg-edge-action-hover);
+}
+
+/* ---- Gradient sweep band (left→right, grey-white) ----
+   Rendered ONLY for selected edges and edges touching a selected/running
+   node (see CanvasEdge.tsx). A 170-unit dash slides along the path painted
+   with a per-edge linearGradient that goes dark→bright left→right in screen
+   space, so it reads as a grey-white sweep bar travelling left→right — not a
+   blue colour block, not a centred spot. No glow / drop-shadow. Pure CSS/SVG
+   animation; pointer-events:none keeps interaction on the hit-path. */
+.canvas-edge-flow {
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: butt;
+  stroke-linejoin: round;
+  stroke-dasharray: 170 620;
+  stroke-dashoffset: 790;
+  opacity: 0.9;
+  filter: none;
+  animation: canvasEdgeFlowLTR 1.7s linear infinite;
+  pointer-events: none;
+}
+
+/* Selected-state flow: restrained. */
+.canvas-edge-flow.selected-flow {
+  stroke-width: 2;
+  opacity: 0.86;
+  animation-duration: 1.7s;
+}
+
+/* Running-state flow: a touch thicker / brighter / faster. Declared after
+   .selected-flow so it wins when an edge is both selected and running.
+   No glow — differentiation is via weight / opacity / speed only. */
+.canvas-edge-flow.running-flow {
+  stroke-width: 2.15;
+  opacity: 1;
+  animation-duration: 1.25s;
+}
+
+@keyframes canvasEdgeFlowLTR {
+  from {
+    stroke-dashoffset: 790;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .canvas-edge-flow {
+    animation: none;
+    stroke-dasharray: 0;
+    opacity: 0.72;
+  }
+}

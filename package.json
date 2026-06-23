@@ -1,0 +1,120 @@
+{
+  "name": "canvasforge",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "main": "electron/main.cjs",
+  "scripts": {
+    "dev": "vite",
+    "typecheck": "tsc -b",
+    "check:i18n": "node scripts/check-i18n.mjs",
+    "test": "npm run test:image-models",
+    "test:image-models": "node --experimental-strip-types --loader ./scripts/ts-extension-loader.mjs src/generation/__tests__/imageModelSystem.test.ts",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "electron:dev": "concurrently -k --success first \"npm run dev\" \"wait-on http://localhost:5173 && cross-env ELECTRON_DEV_SERVER_URL=http://localhost:5173 electron .\"",
+    "electron:preview": "npm run build && cross-env ELECTRON_PREVIEW=true electron .",
+    "dist": "npm run build && electron-builder",
+    "dist:win": "npm run build && electron-builder --win",
+    "dist:portable": "npm run build && electron-builder --win portable"
+  },
+  "dependencies": {
+    "@xyflow/react": "^12.6.0",
+    "dexie": "^4.0.11",
+    "lucide-react": "^1.17.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "three": "^0.184.0",
+    "zustand": "^5.0.5"
+  },
+  "devDependencies": {
+    "@types/react": "^19.1.4",
+    "@types/react-dom": "^19.1.5",
+    "@types/three": "^0.184.1",
+    "@vitejs/plugin-react": "^6.0.2",
+    "concurrently": "^10.0.3",
+    "cross-env": "^10.1.0",
+    "electron": "^42.4.0",
+    "electron-builder": "^26.15.2",
+    "typescript": "~5.8.3",
+    "vite": "^8.0.16",
+    "wait-on": "^9.0.10"
+  },
+  "build": {
+    "appId": "com.canvasforge.desktop",
+    "productName": "CanvasForge",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "public/icons/canvasforge/**/*",
+      "package.json",
+      "!**/node_modules/**/*",
+      "!node_modules/**/*",
+      "!src/**/*",
+      "!release/**/*",
+      "!.claude/**/*",
+      "!docs/**/*",
+      "!README.md",
+      "!LICENSE",
+      "!CHANGELOG.md",
+      "!tsconfig.tsbuildinfo",
+      "!*.zip",
+      "!*.7z",
+      "!*.tar.gz",
+      "!*.log",
+      "!*.map",
+      "!logs/**/*",
+      "!tmp/**/*",
+      "!temp/**/*",
+      "!test/**/*",
+      "!tests/**/*",
+      "!__tests__/**/*",
+      "!coverage/**/*",
+      "!.git/**/*",
+      "!.github/**/*",
+      "!.vscode/**/*",
+      "!.idea/**/*",
+      "!.gitignore",
+      "!.gitattributes",
+      "!.editorconfig",
+      "!.npmrc",
+      "!.nvmrc"
+    ],
+    "asar": true,
+    "compression": "maximum",
+    "win": {
+      "icon": "public/icons/canvasforge/icon.ico",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "installerIcon": "public/icons/canvasforge/icon.ico",
+      "uninstallerIcon": "public/icons/canvasforge/icon.ico",
+      "installerHeaderIcon": "public/icons/canvasforge/icon.ico",
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "CanvasForge",
+      "artifactName": "CanvasForge-Setup-${version}.${ext}"
+    },
+    "portable": {
+      "artifactName": "CanvasForge-Portable-${version}.${ext}"
+    }
+  }
+}
