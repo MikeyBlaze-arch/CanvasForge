@@ -1,6 +1,8 @@
 .canvas-root {
   width: 100%;
   height: 100%;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: geometricPrecision;
 }
 
 /* ── Drag performance: temporarily reduce expensive visual effects ──
@@ -416,6 +418,10 @@
 .canvas-root .react-flow__viewport,
 .canvas-root .react-flow__renderer {
   background: transparent !important;
+}
+
+.canvas-root .react-flow__node {
+  transform-origin: 0 0;
 }
 
 /* Reference-style canvas context menu. */
