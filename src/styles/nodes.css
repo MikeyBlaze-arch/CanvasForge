@@ -49,7 +49,6 @@
   border-radius: 12px;
   transition: border-color 0.2s, box-shadow 0.2s;
   overflow: visible;
-  will-change: transform;
 }
 
 /* GPU layer promotion during drag for smoother repainting */

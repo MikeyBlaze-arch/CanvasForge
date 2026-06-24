@@ -74,6 +74,23 @@ const edgeTypes = {
 }
 
 const HISTORY_DRAG_MIME = 'application/x-canvasforge-history-image'
+const VIEWPORT_ZOOM_STEP = 0.05
+
+function snapViewportZoom(zoom: number) {
+  return Number((Math.round(zoom / VIEWPORT_ZOOM_STEP) * VIEWPORT_ZOOM_STEP).toFixed(2))
+}
+
+function roundViewportCoord(value: number) {
+  return Number(value.toFixed(2))
+}
+
+function normalizeViewportForStorage(vp: Viewport): Viewport {
+  return {
+    x: roundViewportCoord(vp.x),
+    y: roundViewportCoord(vp.y),
+    zoom: snapViewportZoom(vp.zoom),
+  }
+}
 
 function recordImageUrl(record: Partial<HistoryRecord>) {
   return record.url || record.imageUrl || record.thumbnailUrl || ''
@@ -637,7 +654,7 @@ export function CanvasRoot() {
     markDirty()
   }, [markDirty])
 
-  const onViewportChange = useCallback((vp: { x: number; y: number; zoom: number }) => {
+  const onViewportChange = useCallback((vp: Viewport) => {
     pendingViewportRef.current = vp
     if (viewportFrameRef.current != null) return
     viewportFrameRef.current = requestAnimationFrame(() => {
@@ -645,11 +662,18 @@ export function CanvasRoot() {
       const pending = pendingViewportRef.current
       if (!pending) return
       pendingViewportRef.current = null
+      const normalized = normalizeViewportForStorage(pending)
       const { setViewportZoom } = useUIStore.getState()
-      setViewportZoom(pending.zoom)
-      useCanvasStore.getState().setViewport(pending)
+      setViewportZoom(normalized.zoom)
+      useCanvasStore.getState().setViewport(normalized)
     })
   }, [])
+
+  const onViewportMoveEnd = useCallback((_event: MouseEvent | TouchEvent | null, viewport: Viewport) => {
+    const snappedZoom = snapViewportZoom(viewport.zoom)
+    if (Math.abs(snappedZoom - viewport.zoom) < 0.001) return
+    reactFlow.zoomTo(snappedZoom, { duration: 80 })
+  }, [reactFlow])
 
   const onDrop = useCallback(
     async (event: React.DragEvent) => {
@@ -876,6 +900,7 @@ export function CanvasRoot() {
         onDragOver={onDragOver}
         onDrop={onDrop}
         onViewportChange={onViewportChange}
+        onMoveEnd={onViewportMoveEnd}
         fitView
         style={{ background: 'transparent' }}
         deleteKeyCode={null}
