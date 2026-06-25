@@ -1,4 +1,4 @@
-﻿import React, { useCallback, useEffect, useRef, useState } from 'react'
+﻿import React, { useCallback, useEffect, useRef } from 'react'
 import {
   ReactFlow,
   type OnNodesChange,
@@ -18,12 +18,14 @@ import {
 import '@xyflow/react/dist/style.css'
 
 import { useNodeStore } from '../store/nodeStore'
-import { createNodeId } from '../store/nodeStore'
 import { useEdgeStore } from '../store/edgeStore'
 import { useProjectStore } from '../store/projectStore'
 import { useCanvasShortcuts } from './hooks/useCanvasShortcuts'
+import { useCanvasPaneInteraction } from './hooks/useCanvasPaneInteraction'
+import { useCanvasFileDrop } from './hooks/useCanvasFileDrop'
+import { useReferenceCreateMenu } from './hooks/useReferenceCreateMenu'
 import { CanvasContextMenu } from './CanvasContextMenu'
-import { isValidConnection, EDGE_ERROR_MSG } from './edgeRules'
+import { isValidConnection } from './edgeRules'
 import { CanvasEdge } from './edges/CanvasEdge'
 import { TextNodeComponent } from './nodes/TextNode'
 import { ProductAnalysisNodeComponent } from './nodes/ProductAnalysisNode'
@@ -42,19 +44,10 @@ import { StarryCanvasBackground } from './StarryCanvasBackground'
 import { CanvasSelectionToolbar } from './CanvasSelectionToolbar'
 import { createCanvasEdgeId, isDuplicateEdge, normalizeCanvasEdge } from '../store/edgeStore'
 import type { Connection } from '@xyflow/react'
-import { readImageFile, isImageFile } from './imageFileUtils'
-import { readVideoFile, isVideoFile } from './videoFileUtils'
-import { calcThumbnailSize } from '../utils/imageDimensions'
-import type { ImageAssetNodeData, CanvasNodeData, TextNodeData, ImageGenNodeData, LLMNodeData, VideoAssetNodeData, MotionTransferNodeData, VideoGenNodeData, HistoryRecord } from './nodeTypes'
-import { normalizeConnection, migrateEdges } from './connectionNormalizer'
-import { getReferenceMenuRule } from './referenceMenuRules'
+import type { CanvasNodeData } from './nodeTypes'
+import { normalizeConnection } from './connectionNormalizer'
 import { ReferenceCreateMenu } from '../components/ReferenceCreateMenu'
-import type { ReferenceMenuItem } from './referenceMenuRules'
 import { useI18n } from '../i18n/useI18n'
-import { normalizeImageModel, normalizeImageSeries } from '../generation/imageModelRegistry'
-import { DEFAULT_VIDEO_MODEL_ID, getVideoModelById } from '../generation/videoModelRegistry'
-import { createDefaultProductAnalysisNodeData } from './productAnalysisPrompt'
-import { DEFAULT_LLM_MODEL_ID } from '../generation/llmModelRegistry'
 
 const nodeTypes = {
   text: TextNodeComponent,
@@ -73,7 +66,6 @@ const edgeTypes = {
   canvas: CanvasEdge,
 }
 
-const HISTORY_DRAG_MIME = 'application/x-canvasforge-history-image'
 const VIEWPORT_ZOOM_STEP = 0.05
 
 function snapViewportZoom(zoom: number) {
@@ -92,48 +84,8 @@ function normalizeViewportForStorage(vp: Viewport): Viewport {
   }
 }
 
-function recordImageUrl(record: Partial<HistoryRecord>) {
-  return record.url || record.imageUrl || record.thumbnailUrl || ''
-}
-
-function recordWidth(record: Partial<HistoryRecord>) {
-  return record.width || record.naturalWidth || 1024
-}
-
-function recordHeight(record: Partial<HistoryRecord>) {
-  return record.height || record.naturalHeight || 1024
-}
-
-function recordPrompt(record: Partial<HistoryRecord>) {
-  return record.prompt || record.promptSnapshot || ''
-}
-
-function recordFinalSize(record: Partial<HistoryRecord>) {
-  const width = recordWidth(record)
-  const height = recordHeight(record)
-  return record.finalSize || (width > 0 && height > 0 ? `${width}x${height}` : undefined)
-}
-
-function cloneGraphSnapshot(nodes: Node<CanvasNodeData>[], edges: Edge[]) {
-  return {
-    nodes: JSON.parse(JSON.stringify(nodes)) as Node<CanvasNodeData>[],
-    edges: JSON.parse(JSON.stringify(edges)) as Edge[],
-  }
-}
-
-function didNodePositionsChange(before: Node<CanvasNodeData>[], after: Node<CanvasNodeData>[]): boolean {
-  const beforeById = new Map(before.map((node) => [node.id, node.position]))
-  return after.some((node) => {
-    const prev = beforeById.get(node.id)
-    return prev != null && (prev.x !== node.position.x || prev.y !== node.position.y)
-  })
-}
-
 export function CanvasRoot() {
-  const rightDragRef = useRef<{ x: number; y: number; moved: boolean } | null>(null)
-  const leftDragRef = useRef<{ x: number; y: number; moved: boolean } | null>(null)
   const connectSucceededRef = useRef(false)
-  const dragStartSnapshotRef = useRef<ReturnType<typeof cloneGraphSnapshot> | null>(null)
   const viewportFrameRef = useRef<number | null>(null)
   const pendingViewportRef = useRef<Viewport | null>(null)
   const nodes = useNodeStore((s) => s.nodes)
@@ -143,65 +95,34 @@ export function CanvasRoot() {
   const markDirty = useProjectStore((s) => s.markDirty)
   const reactFlow = useReactFlow()
   const { t } = useI18n()
-  const [interactionClass, setInteractionClass] = useState('')
-
-  // Reference menu state
-  const [referenceMenu, setReferenceMenu] = useState<{
-    x: number
-    y: number
-    sourceNodeId: string
-    sourceHandle: string | null
-    sourceNodeType: string
-  } | null>(null)
 
   useCanvasShortcuts()
+
+  // Custom hooks for interaction management
+  const {
+    interactionClass,
+    setInteractionClass,
+    onPaneMouseDown,
+    onPaneMouseMove,
+    onPaneMouseUp,
+    leftDragRef,
+    rightDragRef,
+  } = useCanvasPaneInteraction(reactFlow)
+
+  const { onDragOver, onDrop } = useCanvasFileDrop(reactFlow, markDirty, t)
+
+  const {
+    referenceMenu,
+    setReferenceMenu,
+    handleReferenceMenuSelect,
+    getReferenceMenuRule,
+  } = useReferenceCreateMenu(nodes, edges, setEdges, reactFlow, markDirty, t)
 
   useEffect(() => () => {
     if (viewportFrameRef.current != null) {
       cancelAnimationFrame(viewportFrameRef.current)
     }
   }, [])
-
-  const onPaneMouseDown = useCallback((event: React.MouseEvent) => {
-    if (event.button === 0) {
-      leftDragRef.current = { x: event.clientX, y: event.clientY, moved: false }
-    }
-    if (event.button === 2) {
-      rightDragRef.current = { x: event.clientX, y: event.clientY, moved: false }
-    }
-  }, [])
-
-  const onPaneMouseMove = useCallback((event: React.MouseEvent) => {
-    useCanvasStore.getState().setLastMouseFlowPosition(
-      reactFlow.screenToFlowPosition({ x: event.clientX, y: event.clientY })
-    )
-
-    const leftDrag = leftDragRef.current
-    if (leftDrag && Math.hypot(event.clientX - leftDrag.x, event.clientY - leftDrag.y) > 6) {
-      leftDrag.moved = true
-      if (interactionClass !== 'canvas-dragging') {
-        setInteractionClass('canvas-dragging')
-      }
-    }
-
-    const rightDrag = rightDragRef.current
-    if (rightDrag && Math.hypot(event.clientX - rightDrag.x, event.clientY - rightDrag.y) > 6) {
-      rightDrag.moved = true
-      if (interactionClass !== 'canvas-dragging') {
-        setInteractionClass('canvas-dragging')
-      }
-    }
-  }, [interactionClass, reactFlow])
-
-  const onPaneMouseUp = useCallback(() => {
-    setTimeout(() => {
-      leftDragRef.current = null
-      rightDragRef.current = null
-    }, 0)
-    if (interactionClass !== '') {
-      setInteractionClass('')
-    }
-  }, [interactionClass])
 
   const onNodesChange: OnNodesChange = useCallback(
     (changes) => {
@@ -288,7 +209,7 @@ export function CanvasRoot() {
     if (!nodeType || nodeType === 'group') return
     const ui = useUIStore.getState()
     ui.hideContextMenu()
-  }, [nodes])
+  }, [nodes, setReferenceMenu])
 
   // Handle drag wire end - show reference menu if dropped on empty space
   const onConnectEnd: OnConnectEnd = useCallback((event, connectionState) => {
@@ -338,191 +259,8 @@ export function CanvasRoot() {
         sourceNodeType: sourceType,
       })
     }
-  }, [nodes])
+  }, [nodes, setReferenceMenu, getReferenceMenuRule])
 
-  const handleReferenceMenuSelect = useCallback((
-    nodeType: ReferenceMenuItem['nodeType']
-  ) => {
-    if (!referenceMenu) return
-
-    const { sourceNodeId, sourceHandle } = referenceMenu
-    const sourceNode = nodes.find((n) => n.id === sourceNodeId)
-    if (!sourceNode) return
-    const addNode = useNodeStore.getState().addNode
-
-    // Calculate position for new node
-    let flowPos = reactFlow.screenToFlowPosition({
-      x: referenceMenu.x,
-      y: referenceMenu.y,
-    })
-
-    // Avoid overlap by offsetting if too close
-    const dx = flowPos.x - sourceNode.position.x
-    const dy = flowPos.y - sourceNode.position.y
-    if (Math.abs(dx) < 50 && Math.abs(dy) < 50) {
-      flowPos.x += 320
-    }
-
-    // Create new node based on type
-    const newNodeId = createNodeId()
-    let newNodeData: CanvasNodeData
-    let newNodeWidth = 260
-
-    switch (nodeType) {
-      case 'text': {
-        const textData: TextNodeData = {
-          nodeType: 'text',
-          title: t('node.text'),
-          textKind: 'prompt',
-          content: '',
-          language: 'mixed',
-          updatedAt: Date.now(),
-        }
-        newNodeData = textData as CanvasNodeData
-        newNodeWidth = 260
-        break
-      }
-      case 'product_analysis': {
-        newNodeData = createDefaultProductAnalysisNodeData() as CanvasNodeData
-        newNodeWidth = 330
-        break
-      }
-      case 'image_asset': {
-        const imageData: ImageAssetNodeData = {
-          nodeType: 'image_asset',
-          title: t('node.image'),
-          imageUrl: '',
-          role: 'reference',
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-        }
-        newNodeData = imageData as CanvasNodeData
-        newNodeWidth = 220
-        break
-      }
-      case 'image_gen': {
-        const genData: ImageGenNodeData = {
-          nodeType: 'image_gen',
-          title: t('node.imageGen'),
-          modelSeries: 'G',
-          modelId: 'g-gpt-image-2',
-          aspectRatio: '1:1',
-          resolution: '2K',
-          batchSize: 1,
-          referenceImageOrder: [],
-          status: 'idle',
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-        }
-        newNodeData = genData as CanvasNodeData
-        newNodeWidth = 260
-        break
-      }
-      case 'llm': {
-        const llmData: LLMNodeData = {
-          nodeType: 'llm',
-          title: t('node.llm'),
-          llmProvider: 'openai_compatible',
-          llmModelId: DEFAULT_LLM_MODEL_ID,
-          mode: 'chat',
-          userInput: '',
-          conversation: [],
-          status: 'idle',
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-        }
-        newNodeData = llmData as CanvasNodeData
-        newNodeWidth = 280
-        break
-      }
-      case 'video_asset': {
-        const videoData: VideoAssetNodeData = {
-          nodeType: 'video_asset',
-          title: t('node.videoAsset'),
-          videoUrl: '',
-          role: 'source',
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-        }
-        newNodeData = videoData as CanvasNodeData
-        newNodeWidth = 320
-        break
-      }
-      case 'motion_transfer': {
-        const mtData: MotionTransferNodeData = {
-          nodeType: 'motion_transfer',
-          title: t('node.motionTransfer'),
-          mode: 1,
-          resolution: 720,
-          status: 'idle',
-          param265: 1.0000000000000002,
-          param266: 0.20000000000000004,
-          param271: false,
-          param297: 1.0000000000000002,
-          param300: 840,
-          param361: 1.0000000000000002,
-          param370: false,
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-        }
-        newNodeData = mtData as CanvasNodeData
-        newNodeWidth = 300
-        break
-      }
-      case 'video_gen': {
-        const vgModel = getVideoModelById(DEFAULT_VIDEO_MODEL_ID)
-        const vgData: VideoGenNodeData = {
-          nodeType: 'video_gen',
-          title: t('node.videoGen'),
-          modelId: vgModel?.id ?? DEFAULT_VIDEO_MODEL_ID,
-          backendModel: vgModel?.backendModel,
-          modelLabel: vgModel?.label,
-          aspectRatio: vgModel?.defaultAspectRatio ?? '16:9',
-          size: vgModel?.defaultSize ?? '720p',
-          duration: vgModel?.defaultDuration ?? 5,
-          fps: 24,
-          status: 'idle',
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-        }
-        newNodeData = vgData as CanvasNodeData
-        newNodeWidth = 290
-        break
-      }
-      default:
-        return
-    }
-
-    // Add the new node
-    const newNode: Node<CanvasNodeData> = {
-      id: newNodeId,
-      type: nodeType,
-      position: flowPos,
-      data: newNodeData,
-    }
-    const nextNodes = [...nodes, newNode]
-    addNode(newNode)
-
-    // Create connection with normalized handles 鈥?use nextNodes so normalizeConnection can find the new node
-    const normalizedConnection = normalizeConnection({
-      source: sourceNodeId,
-      target: newNodeId,
-      sourceHandle: sourceHandle || 'main_output',
-      targetHandle: 'main_input',
-    }, nextNodes, edges)
-
-    if (normalizedConnection && isValidConnection(normalizedConnection, nextNodes, edges) && !isDuplicateEdge(edges, normalizedConnection)) {
-      const newEdge = {
-        ...normalizedConnection,
-        id: createCanvasEdgeId(normalizedConnection),
-        type: 'canvas' as const,
-      }
-      setEdges([...edges, newEdge] as Edge[])
-    }
-
-    markDirty()
-    setReferenceMenu(null)
-  }, [referenceMenu, nodes, reactFlow, edges, setEdges, markDirty, t])
 
   const validateLiveConnection = useCallback(
     (connection: Edge | Connection): boolean => {
@@ -550,7 +288,7 @@ export function CanvasRoot() {
       }
       if (!isValidConnection(normalized, nodes as Node<CanvasNodeData>[], edges)) return
 
-      useUndoRedoStore.getState().capture('鍒涘缓杩炵嚎')
+      useUndoRedoStore.getState().capture('创建连线')
 
       const newEdge = {
         ...normalized,
@@ -562,7 +300,7 @@ export function CanvasRoot() {
       setReferenceMenu(null)
       markDirty()
     },
-    [nodes, edges, setEdges, markDirty]
+    [nodes, edges, setEdges, markDirty, setReferenceMenu]
   )
 
   const onPaneClick = useCallback(() => {
@@ -573,12 +311,12 @@ export function CanvasRoot() {
     if (useUIStore.getState().activeRightPanel) {
       useUIStore.getState().closeRightPanel()
     }
-  }, [nodes, edges, setNodes, setEdges])
+  }, [nodes, edges, setNodes, setEdges, setReferenceMenu])
 
   // Close reference menu on viewport change
   const onMove = useCallback(() => {
     setReferenceMenu(null)
-  }, [])
+  }, [setReferenceMenu])
 
   const onCanvasDoubleClick = useCallback(
     (event: React.MouseEvent) => {
@@ -639,20 +377,15 @@ export function CanvasRoot() {
     []
   )
 
-  const onDragOver = useCallback((event: React.DragEvent) => {
-    event.preventDefault()
-    event.dataTransfer.dropEffect = 'copy'
-  }, [])
-
   const onNodeDragStart = useCallback(() => {
-    useUndoRedoStore.getState().capture('绉诲姩鑺傜偣')
+    useUndoRedoStore.getState().capture('移动节点')
     setInteractionClass('node-dragging')
-  }, [])
+  }, [setInteractionClass])
 
   const onNodeDragStop = useCallback(() => {
     setInteractionClass('')
     markDirty()
-  }, [markDirty])
+  }, [markDirty, setInteractionClass])
 
   const onViewportChange = useCallback((vp: Viewport) => {
     pendingViewportRef.current = vp
@@ -675,195 +408,6 @@ export function CanvasRoot() {
     reactFlow.zoomTo(snappedZoom, { duration: 80 })
   }, [reactFlow])
 
-  const onDrop = useCallback(
-    async (event: React.DragEvent) => {
-      event.preventDefault()
-      const historyPayload = event.dataTransfer.getData(HISTORY_DRAG_MIME)
-      if (historyPayload) {
-        try {
-          const record = JSON.parse(historyPayload) as Partial<HistoryRecord> & { historyId?: string }
-          const imageUrl = recordImageUrl(record)
-          if (!imageUrl) return
-
-          const { addNode } = useNodeStore.getState()
-          const basePos = reactFlow.screenToFlowPosition({
-            x: event.clientX,
-            y: event.clientY,
-          })
-          const width = recordWidth(record)
-          const height = recordHeight(record)
-          const thumb = calcThumbnailSize(width, height)
-
-          useUndoRedoStore.getState().capture('Add image from history')
-          const historyId = record.historyId || record.id
-          addNode({
-            id: createNodeId(),
-            type: 'image_asset',
-            position: basePos,
-            data: {
-              nodeType: 'image_asset',
-              title: record.modelLabel || t('common.history'),
-              imageUrl,
-              originalImageUrl: record.url || record.imageUrl,
-              downloadUrl: record.url || record.imageUrl,
-              naturalWidth: width,
-              naturalHeight: height,
-              previewWidth: thumb.width,
-              previewHeight: thumb.height,
-              role: 'reference',
-              sourceType: 'image_gen',
-              sourceNodeId: record.sourceNodeId,
-              modelSeries: normalizeImageSeries(record.modelSeries),
-              modelId: normalizeImageModel(record.modelId || record.backendModel),
-              modelLabel: record.modelLabel,
-              backendModel: record.backendModel,
-              engineType: record.engineType,
-              sizeMode: record.sizeMode,
-              aspectRatio: record.aspectRatio,
-              resolution: record.resolution,
-              finalSize: recordFinalSize(record),
-              prompt: recordPrompt(record),
-              negativePrompt: record.negativePrompt || record.negativePromptSnapshot,
-              metadata: {
-                source: 'history',
-                historyId,
-                historyRecordId: historyId,
-                prompt: recordPrompt(record),
-                modelLabel: record.modelLabel,
-                backendModel: record.backendModel,
-                aspectRatio: record.aspectRatio,
-                resolution: record.resolution,
-                finalSize: recordFinalSize(record),
-                createdAt: record.createdAt,
-                historyCreatedAt: record.createdAt,
-                batchId: record.batchId,
-                batchIndex: record.batchIndex,
-                batchTotal: record.batchTotal,
-              },
-              createdAt: Date.now(),
-              updatedAt: Date.now(),
-            } satisfies ImageAssetNodeData,
-          })
-          markDirty()
-          return
-        } catch (error) {
-          console.warn('[CanvasRoot] Failed to parse history drag payload:', error)
-          return
-        }
-      }
-
-      const allFiles = Array.from(event.dataTransfer.files)
-      const imageFiles = allFiles.filter(isImageFile)
-      const videoFiles = allFiles.filter(isVideoFile)
-      if (imageFiles.length === 0 && videoFiles.length === 0) return
-
-      const { addNode } = useNodeStore.getState()
-      const basePos = reactFlow.screenToFlowPosition({
-        x: event.clientX,
-        y: event.clientY,
-      })
-
-      // Capture undo snapshot before any file uploads
-      useUndoRedoStore.getState().capture('鎷栨嫿涓婁紶')
-
-      let offsetIdx = 0
-
-      // Read all images; offsets prevent overlap when multiple files are dropped at once
-      const imgResults = await Promise.allSettled(imageFiles.map(readImageFile))
-      for (const r of imgResults) {
-        if (r.status !== 'fulfilled') continue
-        const { file, thumbnailUrl, originalUrl, fileName, mimeType, size, naturalWidth, naturalHeight } = r.value
-        const thumb = calcThumbnailSize(naturalWidth, naturalHeight)
-        const output = {
-          type: 'image' as const,
-          file,
-          url: thumbnailUrl,
-          previewUrl: thumbnailUrl,
-          name: fileName,
-          mimeType,
-          size,
-          width: naturalWidth,
-          height: naturalHeight,
-          source: 'local' as const,
-        }
-        const offset = offsetIdx * 280
-        offsetIdx++
-        addNode({
-          id: createNodeId(),
-          type: 'image_asset',
-          position: { x: basePos.x + offset, y: basePos.y },
-          data: {
-            nodeType: 'image_asset',
-            title: fileName,
-            imageUrl: thumbnailUrl,
-            originalImageUrl: originalUrl,
-            downloadUrl: originalUrl,
-            image: output,
-            output,
-            fileName,
-            mimeType,
-            naturalWidth,
-            naturalHeight,
-            previewWidth: thumb.width,
-            previewHeight: thumb.height,
-            role: 'reference',
-            sourceType: 'upload',
-            createdAt: Date.now(),
-            updatedAt: Date.now(),
-          } satisfies ImageAssetNodeData,
-        })
-      }
-
-      // Read all videos
-      const vidResults = await Promise.allSettled(videoFiles.map(readVideoFile))
-      for (const r of vidResults) {
-        if (r.status !== 'fulfilled') continue
-        const { file, videoUrl, fileName, mimeType, size, naturalWidth, naturalHeight, duration, previewWidth, previewHeight } = r.value
-        const output = {
-          type: 'video' as const,
-          file,
-          url: videoUrl,
-          previewUrl: videoUrl,
-          name: fileName,
-          mimeType,
-          size,
-          width: naturalWidth,
-          height: naturalHeight,
-          duration,
-          source: 'local' as const,
-        }
-        const offset = offsetIdx * 400
-        offsetIdx++
-        addNode({
-          id: createNodeId(),
-          type: 'video_asset',
-          position: { x: basePos.x + offset, y: basePos.y },
-          data: {
-            nodeType: 'video_asset',
-            title: fileName,
-            videoUrl,
-            originalVideoUrl: videoUrl,
-            downloadUrl: videoUrl,
-            video: output,
-            output,
-            fileName,
-            mimeType,
-            naturalWidth,
-            naturalHeight,
-            duration,
-            previewWidth,
-            previewHeight,
-            role: 'source',
-            sourceType: 'upload',
-            createdAt: Date.now(),
-            updatedAt: Date.now(),
-          } satisfies VideoAssetNodeData,
-        })
-      }
-      markDirty()
-    },
-    [reactFlow, markDirty]
-  )
 
   return (
     <div className={`canvas-root${interactionClass ? ' ' + interactionClass : ''}`}>
@@ -901,6 +445,7 @@ export function CanvasRoot() {
         onDrop={onDrop}
         onViewportChange={onViewportChange}
         onMoveEnd={onViewportMoveEnd}
+        onMove={onMove}
         fitView
         style={{ background: 'transparent' }}
         deleteKeyCode={null}
