@@ -182,6 +182,9 @@ function ApiTab({ apiKey, setApiKey, baseUrl, setBaseUrl, showKey, setShowKey, e
             {showKey ? <EyeOff size={14} /> : <Eye size={14} />}
           </button>
         </div>
+        <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 4, lineHeight: 1.4 }}>
+          {t('apiSettings.apiKeySecurityWarning')}
+        </div>
       </div>
       <div className="api-settings-field">
         <label className="api-settings-label">{t('apiSettings.baseUrlLabel')}</label>
@@ -561,7 +564,7 @@ function RemoteServiceTab() {
         <div style={{ display: 'flex', gap: 6 }}>
           <input type="text" className="api-settings-input" value={zealmanUrl}
             onChange={(e) => { setZealmanUrl(e.target.value); setPanelTestResult('idle') }}
-            placeholder="https://uu400899-xxxx.westd.seetacloud.com:8443" autoComplete="off"
+            placeholder="https://your-zealman-panel-domain:port" autoComplete="off"
             style={{ flex: 1 }} />
           <button className="cf-btn" onClick={handleTestPanel} disabled={isLoading || loadingTestPanel}
             style={{ flexShrink: 0, whiteSpace: 'nowrap' }}>
@@ -632,7 +635,7 @@ function RemoteServiceTab() {
         <label className="api-settings-label">{t('autodl.startCommand')}</label>
         <input type="text" className="api-settings-input" value={startCmd}
           onChange={(e) => setStartCmd(e.target.value)}
-          placeholder="bash /root/zealman-app/scripts/improved-autostart.sh"
+          placeholder="bash /path/to/your-startup-script.sh"
           autoComplete="off" style={{ fontSize: 10 }} />
       </div>
 

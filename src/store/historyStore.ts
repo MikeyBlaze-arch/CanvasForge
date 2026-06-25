@@ -154,9 +154,14 @@ export const useHistoryStore = create<HistoryState>((set, get) => ({
       .then((records) => {
         const assets = dedupeHistoryRecords(successAssetsOnly(records))
         set({ records: assets, initialized: true, loading: false })
-        if (assets.length !== records.length) replaceHistoryRecords(assets).catch(() => {})
+        if (assets.length !== records.length) replaceHistoryRecords(assets).catch((err) => {
+          console.error('[historyStore] 持久化失败:', err)
+        })
       })
-      .catch(() => set({ records: [], initialized: true, loading: false }))
+      .catch((err) => {
+        console.error('[historyStore] 加载历史记录失败:', err)
+        set({ records: [], initialized: true, loading: false })
+      })
   },
 
   addRecord: (record) => {
@@ -177,7 +182,8 @@ export const useHistoryStore = create<HistoryState>((set, get) => ({
         return addHistoryRecord(readyRecord, withoutSameId)
       })
       .then((records) => set({ records: enforceHistoryLimit(dedupeHistoryRecords(records)) }))
-      .catch(() => {
+      .catch((err) => {
+        console.error('[historyStore] 持久化失败:', err)
         const records = enforceHistoryLimit(dedupeHistoryRecords([normalized, ...get().records.filter((item) => item.id !== normalized.id)]))
         set({ records })
       })
@@ -186,25 +192,33 @@ export const useHistoryStore = create<HistoryState>((set, get) => ({
   removeRecord: (id) => {
     const records = get().records.filter((record) => record.id !== id)
     set({ records })
-    removeHistoryRecords([id], get().records).catch(() => {})
+    removeHistoryRecords([id], get().records).catch((err) => {
+      console.error('[historyStore] 持久化失败:', err)
+    })
   },
 
   removeRecords: (ids) => {
     const idSet = new Set(ids)
     const records = get().records.filter((record) => !idSet.has(record.id))
     set({ records })
-    removeHistoryRecords(ids, get().records).catch(() => {})
+    removeHistoryRecords(ids, get().records).catch((err) => {
+      console.error('[historyStore] 持久化失败:', err)
+    })
   },
 
   clearRecords: () => {
     set({ records: [] })
-    clearHistoryRecords().catch(() => {})
+    clearHistoryRecords().catch((err) => {
+      console.error('[historyStore] 持久化失败:', err)
+    })
   },
 
   setRecords: (records) => {
     const normalized = enforceHistoryLimit(dedupeHistoryRecords(successAssetsOnly(records.map(normalizeHistoryRecord))))
     set({ records: normalized, initialized: true, loading: false })
-    replaceHistoryRecords(normalized).catch(() => {})
+    replaceHistoryRecords(normalized).catch((err) => {
+      console.error('[historyStore] 持久化失败:', err)
+    })
   },
 
   updateRecord: (id, patch) => {
@@ -212,7 +226,9 @@ export const useHistoryStore = create<HistoryState>((set, get) => ({
       record.id === id ? normalizeHistoryRecord({ ...record, ...patch }) : record
     ))))
     set({ records })
-    replaceHistoryRecords(records).catch(() => {})
+    replaceHistoryRecords(records).catch((err) => {
+      console.error('[historyStore] 持久化失败:', err)
+    })
   },
 
   getRecord: (id) => get().records.find((record) => record.id === id),

@@ -13,8 +13,11 @@
  *  9. Extract video from results[]
  */
 
-const DEFAULT_ZEALMAN_BASE_URL =
-  'https://uu400899-780050b16fa4.westd.seetacloud.com:8443'
+/**
+ * 不要在此处填写任何真实的服务器地址，必须留空，引导用户在设置面板中自行填写。
+ * Do not hard-code any real server address here. Leave it empty and guide users to configure it in the settings panel.
+ */
+const DEFAULT_ZEALMAN_BASE_URL = ''
 
 // ── Types ───────────────────────────────────────────────────────────────
 

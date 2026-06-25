@@ -60,7 +60,7 @@ export const useRemoteServiceStore = create<RemoteServiceState>((set) => ({
   autodlHost: readLS(LS_KEY_AUTODL_HOST, 'https://www.autodl.art'),
   autodlToken: readLS(LS_KEY_AUTODL_TOKEN, ''),
   autodlInstanceUuid: readLS(LS_KEY_AUTODL_UUID, ''),
-  autodlStartCommand: readLS(LS_KEY_AUTODL_START_CMD, 'bash /root/zealman-app/scripts/improved-autostart.sh'),
+  autodlStartCommand: readLS(LS_KEY_AUTODL_START_CMD, 'bash /path/to/your-startup-script.sh'),
   autodlUseNetworkTurbo: readLS(LS_KEY_AUTODL_USE_TURBO, 'true') === 'true',
 
   setAutodlHost: (v) => { writeLS(LS_KEY_AUTODL_HOST, v); set({ autodlHost: v }) },

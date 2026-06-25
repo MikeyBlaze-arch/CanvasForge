@@ -44,11 +44,11 @@ function resolvePayloadModel(payload: Record<string, unknown>): ImageModelDefini
 
   const model = getImageModelByBackendModel(requestModel)
   if (!model) {
-    throw new Error(`鏈煡鍥剧墖妯″瀷锛?{requestModel}`)
+    throw new Error(`未知图片模型：${requestModel}`)
   }
 
   if (payload.model !== model.backendModel) {
-    throw new Error(`妯″瀷鍚嶈閿欒鏀瑰啓锛歴elected=${model.backendModel}, request=${String(payload.model ?? '')}`)
+    throw new Error(`模型名被错误改写：selected=${model.backendModel}, request=${String(payload.model ?? '')}`)
   }
 
   return model

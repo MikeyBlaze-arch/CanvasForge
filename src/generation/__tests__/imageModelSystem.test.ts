@@ -1,3 +1,4 @@
+import { describe, it, expect } from 'vitest'
 import type { Edge, Node } from '@xyflow/react'
 import {
   IMAGE_MODEL_REGISTRY,
@@ -26,191 +27,185 @@ import {
 import { DEFAULT_LLM_MODEL_ID, normalizeLLMModelId } from '../llmModelRegistry.ts'
 import type { CanvasNodeData } from '../../canvas/nodeTypes.ts'
 
-function assert(condition: unknown, message: string): asserts condition {
-  if (!condition) throw new Error(message)
-}
-
-function assertEqual<T>(actual: T, expected: T, message: string) {
-  if (actual !== expected) {
-    throw new Error(`${message}. Expected ${String(expected)}, received ${String(actual)}`)
-  }
-}
-
 const countBySeries = (series: 'G' | 'R' | 'C') => IMAGE_MODEL_REGISTRY.filter((model) => model.series === series).length
 
-assertEqual(countBySeries('G'), 8, 'G series model count')
-assertEqual(countBySeries('R'), 4, 'R series model count')
-assertEqual(countBySeries('C'), 5, 'C series model count')
-assertEqual(getImageModelById('g-gpt-image-2')?.label, 'G 智能出图 V2', 'G GPT label')
-assertEqual(getImageModelById('g-gpt-image-2')?.backendModel, 'A-gpt-image-2', 'G GPT backendModel')
-assert(getImageModelById('g-gpt-image-2-vip'), 'G GPT VIP model exists')
-assertEqual(getImageModelById('g-gpt-image-2-vip')?.backendModel, 'A-gpt-image-2-vip', 'G GPT VIP backendModel')
-assertEqual(getImageModelById('r-gpt-image-2')?.backendModel, 'R-gpt-image-2', 'R GPT backendModel')
-assertEqual(getImageModelById('r-gpt-image-2-vip')?.backendModel, 'R-gpt-image-2-vip', 'R VIP backendModel')
-assertEqual(getImageModelById('c-gpt-image-2-all')?.backendModel, 'C-gpt-image-2-all', 'C all backendModel')
-assertEqual(getImageModelById('g-nano-banana-pro-vt')?.backendModel, 'G-nano-banana-pro-vt', 'G Pro VT backendModel')
-assertEqual(getImageModelById('r-nano-banana-2')?.backendModel, 'R-nano-banana-2', 'R Nano V2 backendModel')
-assert(!getImageModelById('g-nano-banana-fast'), 'Deleted G Fast model must not exist')
-assert(!getImageModelById('r-nano-banana-pro-vip'), 'Deleted R Pro VIP model must not exist')
-assert(IMAGE_MODEL_REGISTRY.every((model) => model.supports4K), 'All image models must support 4K')
-assert(IMAGE_MODEL_REGISTRY.every((model) => model.label && model.backendModel && model.engineType && model.sizeMode), 'All image models must have required fields')
+describe('Image Model System Tests', () => {
+  it('should pass all model system tests', async () => {
+const countBySeries = (series: 'G' | 'R' | 'C') => IMAGE_MODEL_REGISTRY.filter((model) => model.series === series).length
 
-const gpt2k = buildImageGenerationPayload({
+    expect(countBySeries('G')).toBe(8) // G series model count
+    expect(countBySeries('R')).toBe(4) // R series model count
+    expect(countBySeries('C')).toBe(5) // C series model count
+    expect(getImageModelById('g-gpt-image-2')?.label).toBe('G 智能出图 V2') // G GPT label
+    expect(getImageModelById('g-gpt-image-2')?.backendModel).toBe('A-gpt-image-2') // G GPT backendModel
+    expect(getImageModelById('g-gpt-image-2-vip')).toBeTruthy() // G GPT VIP model exists
+    expect(getImageModelById('g-gpt-image-2-vip')?.backendModel).toBe('A-gpt-image-2-vip') // G GPT VIP backendModel
+    expect(getImageModelById('r-gpt-image-2')?.backendModel).toBe('R-gpt-image-2') // R GPT backendModel
+    expect(getImageModelById('r-gpt-image-2-vip')?.backendModel).toBe('R-gpt-image-2-vip') // R VIP backendModel
+    expect(getImageModelById('c-gpt-image-2-all')?.backendModel).toBe('C-gpt-image-2-all') // C all backendModel
+    expect(getImageModelById('g-nano-banana-pro-vt')?.backendModel).toBe('G-nano-banana-pro-vt') // G Pro VT backendModel
+    expect(getImageModelById('r-nano-banana-2')?.backendModel).toBe('R-nano-banana-2') // R Nano V2 backendModel
+    expect(getImageModelById('g-nano-banana-fast')).toBeFalsy() // Deleted G Fast model must not exist
+    expect(getImageModelById('r-nano-banana-pro-vip')).toBeFalsy() // Deleted R Pro VIP model must not exist
+    expect(IMAGE_MODEL_REGISTRY.every((model) => model.supports4K)).toBeTruthy() // All image models must support 4K
+    expect(IMAGE_MODEL_REGISTRY.every((model) => model.label && model.backendModel && model.engineType && model.sizeMode)).toBeTruthy() // All image models must have required fields
+
+    const gpt2k = buildImageGenerationPayload({
   modelId: 'g-gpt-image-2',
   prompt: 'test',
   aspectRatio: '16:9',
   resolution: '2K',
-})
-assertEqual(gpt2k.model, 'A-gpt-image-2', 'GPT 2K model')
-assertEqual(gpt2k.size, '2048x1152', 'GPT 16:9 2K fixed size')
-assertEqual(gpt2k.n, 1, 'GPT n')
+    })
+    expect(gpt2k.model).toBe('A-gpt-image-2') // GPT 2K model
+    expect(gpt2k.size).toBe('2048x1152') // GPT 16:9 2K fixed size
+    expect(gpt2k.n).toBe(1) // GPT n
 
-const gptBatch4 = buildImageGenerationPayload({
+    const gptBatch4 = buildImageGenerationPayload({
   modelId: 'g-gpt-image-2',
   prompt: 'test',
   aspectRatio: '1:1',
   resolution: '2K',
   batchSize: 4,
-})
-assertEqual(gptBatch4.n, 4, 'GPT batchSize 4 maps to n=4')
-assertEqual(gptBatch4.size, '2048x2048', 'GPT 1:1 2K fixed size')
+    })
+    expect(gptBatch4.n).toBe(4) // GPT batchSize 4 maps to n=4
+    expect(gptBatch4.size).toBe('2048x2048') // GPT 1:1 2K fixed size
 
-const gptQueuedSingle = buildSingleImagePayload(gptBatch4, 2)
-assertEqual(gptQueuedSingle.n, 1, 'queued GPT task forces n=1')
-assertEqual(gptQueuedSingle.size, '2048x2048', 'queued GPT task keeps fixed size')
+    const gptQueuedSingle = buildSingleImagePayload(gptBatch4, 2)
+    expect(gptQueuedSingle.n).toBe(1) // queued GPT task forces n=1
+    expect(gptQueuedSingle.size).toBe('2048x2048') // queued GPT task keeps fixed size
 
-const gptBatch12 = buildImageGenerationPayload({
+    const gptBatch12 = buildImageGenerationPayload({
   modelId: 'g-gpt-image-2',
   prompt: 'test',
   aspectRatio: '1:1',
   resolution: '2K',
   batchSize: 12,
-})
-assertEqual(gptBatch12.n, 12, 'GPT batchSize 12 maps to n=12')
+    })
+    expect(gptBatch12.n).toBe(12) // GPT batchSize 12 maps to n=12
 
-const gptBatch0 = buildImageGenerationPayload({
+    const gptBatch0 = buildImageGenerationPayload({
   modelId: 'g-gpt-image-2',
   prompt: 'test',
   aspectRatio: '1:1',
   resolution: '2K',
   batchSize: 0,
-})
-assertEqual(gptBatch0.n, 1, 'GPT batchSize 0 normalizes to 1')
+    })
+    expect(gptBatch0.n).toBe(1) // GPT batchSize 0 normalizes to 1
 
-const gptBatch99 = buildImageGenerationPayload({
+    const gptBatch99 = buildImageGenerationPayload({
   modelId: 'g-gpt-image-2',
   prompt: 'test',
   aspectRatio: '1:1',
   resolution: '2K',
   batchSize: 99,
-})
-assertEqual(gptBatch99.n, 1, 'GPT batchSize 99 normalizes to 1')
+    })
+    expect(gptBatch99.n).toBe(1) // GPT batchSize 99 normalizes to 1
 
-const gpt4k = buildImageGenerationPayload({
+    const gpt4k = buildImageGenerationPayload({
   modelId: 'r-gpt-image-2',
   prompt: 'test',
   aspectRatio: '16:9',
   resolution: '4K',
-})
-assertEqual(gpt4k.model, 'R-gpt-image-2', 'R GPT 4K model')
-assertEqual(gpt4k.size, '3840x2160', 'GPT 16:9 4K fixed size')
+    })
+    expect(gpt4k.model).toBe('R-gpt-image-2') // R GPT 4K model
+    expect(gpt4k.size).toBe('3840x2160') // GPT 16:9 4K fixed size
 
-// ── G/R smart V2 + VIP fixed-size acceptance ──
-const gVip4k = buildImageGenerationPayload({
+    // ── G/R smart V2 + VIP fixed-size acceptance ──
+    const gVip4k = buildImageGenerationPayload({
   modelId: 'g-gpt-image-2-vip',
   prompt: 'test',
   aspectRatio: '16:9',
   resolution: '4K',
-})
-assertEqual(gVip4k.model, 'A-gpt-image-2-vip', 'G VIP 4K model')
-assertEqual(gVip4k.size, '3840x2160', 'G VIP 16:9 4K fixed size')
+    })
+    expect(gVip4k.model).toBe('A-gpt-image-2-vip') // G VIP 4K model
+    expect(gVip4k.size).toBe('3840x2160') // G VIP 16:9 4K fixed size
 
-const rGpt2k = buildImageGenerationPayload({
+    const rGpt2k = buildImageGenerationPayload({
   modelId: 'r-gpt-image-2',
   prompt: 'test',
   aspectRatio: '1:1',
   resolution: '2K',
-})
-assertEqual(rGpt2k.model, 'R-gpt-image-2', 'R GPT 2K model')
-assertEqual(rGpt2k.size, '2048x2048', 'R GPT 1:1 2K fixed size')
+    })
+    expect(rGpt2k.model).toBe('R-gpt-image-2') // R GPT 2K model
+    expect(rGpt2k.size).toBe('2048x2048') // R GPT 1:1 2K fixed size
 
-const rVip4k = buildImageGenerationPayload({
+    const rVip4k = buildImageGenerationPayload({
   modelId: 'r-gpt-image-2-vip',
   prompt: 'test',
   aspectRatio: '16:9',
   resolution: '4K',
-})
-assertEqual(rVip4k.model, 'R-gpt-image-2-vip', 'R VIP 4K model')
-assertEqual(rVip4k.size, '3840x2160', 'R VIP 16:9 4K fixed size')
+    })
+    expect(rVip4k.model).toBe('R-gpt-image-2-vip') // R VIP 4K model
+    expect(rVip4k.size).toBe('3840x2160') // R VIP 16:9 4K fixed size
 
-const gpt34 = buildImageGenerationPayload({
+    const gpt34 = buildImageGenerationPayload({
   modelId: 'g-gpt-image-2',
   prompt: 'test',
   aspectRatio: '3:4',
   resolution: '2K',
-})
-assertEqual(gpt34.size, '1728x2304', 'GPT 3:4 2K fixed size')
+    })
+    expect(gpt34.size).toBe('1728x2304') // GPT 3:4 2K fixed size
 
-assertEqual(formatAspectRatioLabel('auto'), 'Auto', 'Auto label only')
-assertEqual(formatAspectRatioLabel('1:1'), '1:1', 'ratio label only')
-assertEqual(formatAspectRatioLabel('1:1 / 2048x2048'), '1:1', 'legacy ratio/size label normalizes')
-assertEqual(normalizeAspectRatioOptionValue('16:9 / 3840\u00d72160'), '16:9', 'legacy unicode multiply ratio normalizes')
-assertEqual(normalizeAspectRatioOptionValue('3:4 / 1728\u81032304'), '3:4', 'legacy mojibake ratio normalizes')
-assertEqual(normalizeAspectRatio('2048\u00d72048'), '1:1', 'legacy pixel size normalizes to ratio')
+    expect(formatAspectRatioLabel('auto')).toBe('Auto') // Auto label only
+    expect(formatAspectRatioLabel('1:1')).toBe('1:1') // ratio label only
+    expect(formatAspectRatioLabel('1:1 / 2048x2048')).toBe('1:1') // legacy ratio/size label normalizes
+    expect(normalizeAspectRatioOptionValue('16:9 / 3840\u00d72160')).toBe('16:9') // legacy unicode multiply ratio normalizes
+    expect(normalizeAspectRatioOptionValue('3:4 / 1728\u81032304')).toBe('3:4') // legacy mojibake ratio normalizes
+    expect(normalizeAspectRatio('2048\u00d72048')).toBe('1:1') // legacy pixel size normalizes to ratio
 
-for (const forbiddenKey of ['aspect_ratio', 'image_size', 'imageSize', 'quality', 'return_full_resolution']) {
-  assert(!(forbiddenKey in gpt2k), `GPT payload must not contain ${forbiddenKey}`)
-  assert(!(forbiddenKey in gpt4k), `GPT payload must not contain ${forbiddenKey}`)
-}
+    for (const forbiddenKey of ['aspect_ratio', 'image_size', 'imageSize', 'quality', 'return_full_resolution']) {
+  expect(!(forbiddenKey in gpt2k), `GPT payload must not contain ${forbiddenKey}`)
+  expect(!(forbiddenKey in gpt4k), `GPT payload must not contain ${forbiddenKey}`)
+    }
 
-const nano4k = buildImageGenerationPayload({
+    const nano4k = buildImageGenerationPayload({
   modelId: 'g-nano-banana-pro-vt',
   prompt: 'test',
   aspectRatio: '16:9',
   resolution: '2K',
   batchSize: 4,
-})
-assertEqual(nano4k.model, 'G-nano-banana-pro-vt', 'Nano model')
-assertEqual(nano4k.n, 4, 'Nano batchSize 4 maps to n=4')
-const nanoQueuedSingle = buildSingleImagePayload(nano4k, 3)
-assertEqual(nanoQueuedSingle.n, 1, 'queued Nano task forces n=1')
-assertEqual(nanoQueuedSingle.aspect_ratio, '16:9', 'queued Nano task keeps aspect_ratio')
-assertEqual(nano4k.aspect_ratio, '16:9', 'Nano aspect_ratio')
-assertEqual(nano4k.image_size, '2K', 'Nano image_size')
-assert(!('size' in nano4k), 'Nano payload must not send size by default')
-assert(!('quality' in nano4k), 'Nano payload must not send quality by default')
-assert(!('resolution' in nano4k), 'Nano payload must not send resolution by default')
-assert(!('ratio' in nano4k), 'Nano payload must not send ratio alias by default')
-assert(!('imageSize' in nano4k), 'Nano payload must not send imageSize alias by default')
-assert(!('return_original' in nano4k), 'Nano payload must not send return_original by default')
-assert(!('return_full_resolution' in nano4k), 'Nano payload must not send return_full_resolution by default')
-assert(!String(nano4k.model).endsWith('-4k') && !String(nano4k.model).endsWith('-2k'), 'Nano model must not include resolution suffix')
+    })
+    expect(nano4k.model).toBe('G-nano-banana-pro-vt') // Nano model
+    expect(nano4k.n).toBe(4) // Nano batchSize 4 maps to n=4
+    const nanoQueuedSingle = buildSingleImagePayload(nano4k, 3)
+    expect(nanoQueuedSingle.n).toBe(1) // queued Nano task forces n=1
+    expect(nanoQueuedSingle.aspect_ratio).toBe('16:9') // queued Nano task keeps aspect_ratio
+    expect(nano4k.aspect_ratio).toBe('16:9') // Nano aspect_ratio
+    expect(nano4k.image_size).toBe('2K') // Nano image_size
+    expect('size' in nano4k).toBeFalsy() // Nano payload must not send size by default
+    expect('quality' in nano4k).toBeFalsy() // Nano payload must not send quality by default
+    expect('resolution' in nano4k).toBeFalsy() // Nano payload must not send resolution by default
+    expect('ratio' in nano4k).toBeFalsy() // Nano payload must not send ratio alias by default
+    expect('imageSize' in nano4k).toBeFalsy() // Nano payload must not send imageSize alias by default
+    expect('return_original' in nano4k).toBeFalsy() // Nano payload must not send return_original by default
+    expect('return_full_resolution' in nano4k).toBeFalsy() // Nano payload must not send return_full_resolution by default
+    expect(String(nano4k.model).endsWith('-4k') && !String(nano4k.model).endsWith('-2k')).toBeFalsy() // Nano model must not include resolution suffix
 
-// ── Backend model name normalization (strip -1k/-2k/-4k suffixes) ───────
-assertEqual(normalizeBackendModelName('C-nano-banana-pro-2k'), 'C-nano-banana-pro', 'strip -2k suffix')
-assertEqual(normalizeBackendModelName('G-nano-banana-pro-4k'), 'G-nano-banana-pro', 'strip -4k suffix')
-assertEqual(normalizeBackendModelName('R-nano-banana-2-1k'), 'R-nano-banana-2', 'strip -1k suffix')
-assertEqual(normalizeBackendModelName('c-nano-banana-pro-2K'), 'c-nano-banana-pro', 'strip uppercase -2K suffix')
-assertEqual(normalizeBackendModelName('foo_4k'), 'foo', 'strip underscore _4k suffix')
-assertEqual(normalizeBackendModelName('G-nano-banana-pro'), 'G-nano-banana-pro', 'no suffix untouched')
-assertEqual(normalizeBackendModelName('g-nano-banana-2-cl'), 'g-nano-banana-2-cl', 'body chars (-cl) not stripped')
+    // ── Backend model name normalization (strip -1k/-2k/-4k suffixes) ───────
+    expect(normalizeBackendModelName('C-nano-banana-pro-2k')).toBe('C-nano-banana-pro') // strip -2k suffix
+    expect(normalizeBackendModelName('G-nano-banana-pro-4k')).toBe('G-nano-banana-pro') // strip -4k suffix
+    expect(normalizeBackendModelName('R-nano-banana-2-1k')).toBe('R-nano-banana-2') // strip -1k suffix
+    expect(normalizeBackendModelName('c-nano-banana-pro-2K')).toBe('c-nano-banana-pro') // strip uppercase -2K suffix
+    expect(normalizeBackendModelName('foo_4k')).toBe('foo') // strip underscore _4k suffix
+    expect(normalizeBackendModelName('G-nano-banana-pro')).toBe('G-nano-banana-pro') // no suffix untouched
+    expect(normalizeBackendModelName('g-nano-banana-2-cl')).toBe('g-nano-banana-2-cl') // body chars (-cl) not stripped
 
-// ── Legacy model migration (old project / history names → current registry) ──
-assertEqual(resolveModelIdFromLegacy('C-nano-banana-pro-2k'), 'c-nano-banana-pro', 'legacy C-pro-2k migration')
-assertEqual(resolveModelIdFromLegacy('G-nano-banana-pro-4k'), 'g-nano-banana-pro', 'legacy G-pro-4k migration')
-assertEqual(getImageModelById(resolveModelIdFromLegacy('R-gpt-image-2'))?.backendModel, 'R-gpt-image-2', 'legacy R-gpt-image-2 → R-gpt-image-2')
-assertEqual(getImageModelById(resolveModelIdFromLegacy('R-gpt-image-2-vip'))?.backendModel, 'R-gpt-image-2-vip', 'legacy R-gpt-image-2-vip → R-gpt-image-2-vip')
-assertEqual(resolveModelIdFromLegacy('g 全能出图 fast'), 'g-nano-banana', 'legacy G Fast → g-nano-banana')
-assertEqual(resolveModelIdFromLegacy('c全能出图 v2'), 'c-nano-banana-2', 'legacy C 全能出图 v2 → c-nano-banana-2')
-assertEqual(resolveModelIdFromLegacy('deleted-model-xyz'), 'g-gpt-image-2', 'unknown model falls back to default')
+    // ── Legacy model migration (old project / history names → current registry) ──
+    expect(resolveModelIdFromLegacy('C-nano-banana-pro-2k')).toBe('c-nano-banana-pro') // legacy C-pro-2k migration
+    expect(resolveModelIdFromLegacy('G-nano-banana-pro-4k')).toBe('g-nano-banana-pro') // legacy G-pro-4k migration
+    expect(getImageModelById(resolveModelIdFromLegacy('R-gpt-image-2'))?.backendModel).toBe('R-gpt-image-2') // legacy R-gpt-image-2 → R-gpt-image-2
+    expect(getImageModelById(resolveModelIdFromLegacy('R-gpt-image-2-vip'))?.backendModel).toBe('R-gpt-image-2-vip') // legacy R-gpt-image-2-vip → R-gpt-image-2-vip
+    expect(resolveModelIdFromLegacy('g 全能出图 fast')).toBe('g-nano-banana') // legacy G Fast → g-nano-banana
+    expect(resolveModelIdFromLegacy('c全能出图 v2')).toBe('c-nano-banana-2') // legacy C 全能出图 v2 → c-nano-banana-2
+    expect(resolveModelIdFromLegacy('deleted-model-xyz')).toBe('g-gpt-image-2') // unknown model falls back to default
 
-// No registry backend model carries a resolution suffix
-assert(IMAGE_MODEL_REGISTRY.every((m) => !/-[124]k$/i.test(m.backendModel)), 'No registry backendModel has a resolution suffix')
+    // No registry backend model carries a resolution suffix
+    expect(IMAGE_MODEL_REGISTRY.every((m) => !/-[124]k$/i.test(m.backendModel))).toBeTruthy() // No registry backendModel has a resolution suffix
 
-const authHeaders = { Authorization: 'Bearer test' }
-const gptModel = getImageModelById('r-gpt-image-2-vip')
-assert(gptModel, 'R VIP model exists')
-const gptRoute = await buildImageGenerationRequest({
+    const authHeaders = { Authorization: 'Bearer test' }
+    const gptModel = getImageModelById('r-gpt-image-2-vip')
+    expect(gptModel).toBeTruthy() // R VIP model exists
+    const gptRoute = await buildImageGenerationRequest({
   payload: {
     model: 'A-gpt-image-2-vip',
     prompt: 'test',
@@ -222,13 +217,13 @@ const gptRoute = await buildImageGenerationRequest({
   model: gptModel,
   baseUrl: 'https://relay.example',
   authHeaders,
-})
-assertEqual(gptRoute.endpoint, 'https://relay.example/v1/images/generations', 'GPT text endpoint')
-assertEqual(gptRoute.debugInfo.contentType, 'application/json', 'GPT text content type')
-assertEqual(gptRoute.debugInfo.payloadKeys.join(','), 'model,n,prompt,size', 'GPT text payload keys must be clean')
+    })
+    expect(gptRoute.endpoint).toBe('https://relay.example/v1/images/generations') // GPT text endpoint
+    expect(gptRoute.debugInfo.contentType).toBe('application/json') // GPT text content type
+    expect(gptRoute.debugInfo.payloadKeys.join(','), 'model,n,prompt,size', 'GPT text payload keys must be clean')
 
-const png1x1 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII='
-const gptEditRoute = await buildImageGenerationRequest({
+    const png1x1 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII='
+    const gptEditRoute = await buildImageGenerationRequest({
   payload: {
     model: 'A-gpt-image-2-vip',
     prompt: 'test',
@@ -240,49 +235,49 @@ const gptEditRoute = await buildImageGenerationRequest({
   model: gptModel,
   baseUrl: 'https://relay.example',
   authHeaders,
-})
-assertEqual(gptEditRoute.endpoint, 'https://relay.example/v1/images/edits', 'GPT image endpoint')
-assertEqual(gptEditRoute.debugInfo.contentType, 'multipart/form-data', 'GPT image content type')
-assertEqual(gptEditRoute.debugInfo.payloadKeys.join(','), 'image,model,n,prompt,size', 'GPT image payload keys must be clean')
+    })
+    expect(gptEditRoute.endpoint).toBe('https://relay.example/v1/images/edits') // GPT image endpoint
+    expect(gptEditRoute.debugInfo.contentType).toBe('multipart/form-data') // GPT image content type
+    expect(gptEditRoute.debugInfo.payloadKeys.join(','), 'image,model,n,prompt,size', 'GPT image payload keys must be clean')
 
-const nanoModel = getImageModelById('g-nano-banana-pro-vt')
-assert(nanoModel, 'Nano model exists')
-const nanoRoute = await buildImageGenerationRequest({
+    const nanoModel = getImageModelById('g-nano-banana-pro-vt')
+    expect(nanoModel).toBeTruthy() // Nano model exists
+    const nanoRoute = await buildImageGenerationRequest({
   payload: nano4k,
   model: nanoModel,
   baseUrl: 'https://relay.example',
   authHeaders,
-})
-assertEqual(nanoRoute.endpoint, 'https://relay.example/v1/images/generations', 'Nano text endpoint')
-assertEqual(nanoRoute.debugInfo.contentType, 'application/json', 'Nano text content type')
-assertEqual(String(nanoRoute.debugInfo.payloadKeys.includes('image_size')), 'true', 'Nano payload includes image_size')
-assertEqual(String(nanoRoute.debugInfo.payloadKeys.includes('size')), 'false', 'Nano payload must not include size by default')
+    })
+    expect(nanoRoute.endpoint).toBe('https://relay.example/v1/images/generations') // Nano text endpoint
+    expect(nanoRoute.debugInfo.contentType).toBe('application/json') // Nano text content type
+    expect(String(nanoRoute.debugInfo.payloadKeys.includes('image_size'))).toBe('true') // Nano payload includes image_size
+    expect(String(nanoRoute.debugInfo.payloadKeys.includes('size'))).toBe('false') // Nano payload must not include size by default
 
-const nanoRefRoute = await buildImageGenerationRequest({
+    const nanoRefRoute = await buildImageGenerationRequest({
   payload: { ...nano4k, images: [png1x1] },
   model: nanoModel,
   baseUrl: 'https://relay.example',
   authHeaders,
-})
-assertEqual(nanoRefRoute.endpoint, 'https://relay.example/v1beta/models/G-nano-banana-pro-vt:generateContent', 'Nano image endpoint')
-assertEqual(nanoRefRoute.debugInfo.payloadKeys.join(','), 'contents,generationConfig', 'Nano image payload follows Gemini-style PixelForge path')
+    })
+    expect(nanoRefRoute.endpoint).toBe('https://relay.example/v1beta/models/G-nano-banana-pro-vt:generateContent') // Nano image endpoint
+    expect(nanoRefRoute.debugInfo.payloadKeys.join(','), 'contents,generationConfig', 'Nano image payload follows Gemini-style PixelForge path')
 
-const parsedMultiUrl = parseImageGenerationResponse({ data: [{ url: 'https://example.com/a.png' }, { url: 'https://example.com/b.png' }] })
-assertEqual(parsedMultiUrl.images.length, 2, 'parser data[] url count')
-assertEqual(parsedMultiUrl.imageUrl, 'https://example.com/a.png', 'parser first url compatibility')
-assertEqual(parsedMultiUrl.matchedField, 'data[0].url', 'parser data[0].url')
+    const parsedMultiUrl = parseImageGenerationResponse({ data: [{ url: 'https://example.com/a.png' }, { url: 'https://example.com/b.png' }] })
+    expect(parsedMultiUrl.images.length).toBe(2) // parser data[] url count
+    expect(parsedMultiUrl.imageUrl).toBe('https://example.com/a.png') // parser first url compatibility
+    expect(parsedMultiUrl.matchedField).toBe('data[0].url') // parser data[0].url
 
-const parsedMultiBase64 = parseImageGenerationResponse({ data: [{ b64_json: 'a'.repeat(128) }, { b64_json: 'b'.repeat(128) }] })
-assertEqual(parsedMultiBase64.images.length, 2, 'parser data[] b64 count')
-assertEqual(parsedMultiBase64.matchedField, 'data[0].b64_json', 'parser data[0].b64_json')
-assert(Boolean(parsedMultiBase64.dataUrl), 'parser first b64 compatibility')
+    const parsedMultiBase64 = parseImageGenerationResponse({ data: [{ b64_json: 'a'.repeat(128) }, { b64_json: 'b'.repeat(128) }] })
+    expect(parsedMultiBase64.images.length).toBe(2) // parser data[] b64 count
+    expect(parsedMultiBase64.matchedField).toBe('data[0].b64_json') // parser data[0].b64_json
+    expect(Boolean(parsedMultiBase64.dataUrl)).toBeTruthy() // parser first b64 compatibility
 
-assertEqual(parseImageGenerationResponse({ candidates: [{ content: { parts: [{ inlineData: { mimeType: 'image/png', data: 'a'.repeat(128) } }] } }] }).matchedField, 'candidates[0].content.parts[0].inlineData', 'parser inlineData')
-assertEqual(parseImageGenerationResponse({ output_url: 'https://example.com/out.png' }).matchedField, 'output_url', 'parser output_url')
-assertEqual(parseImageGenerationResponse('![x](https://example.com/md.png)').matchedField, '.markdown_image', 'parser markdown image')
-assertEqual(parseImageGenerationResponse({ output_url: 'https://example.com/out.png' }).images.length, 1, 'parser single image wraps in images[]')
+    expect(parseImageGenerationResponse({ candidates: [{ content: { parts: [{ inlineData: { mimeType: 'image/png', data: 'a'.repeat(128) } }] } }] }).matchedField, 'candidates[0].content.parts[0].inlineData', 'parser inlineData')
+    expect(parseImageGenerationResponse({ output_url: 'https://example.com/out.png' }).matchedField).toBe('output_url') // parser output_url
+    expect(parseImageGenerationResponse('![x](https://example.com/md.png)').matchedField).toBe('.markdown_image') // parser markdown image
+    expect(parseImageGenerationResponse({ output_url: 'https://example.com/out.png' }).images.length).toBe(1) // parser single image wraps in images[]
 
-const migratedBatchHistory = migrateHistoryItems([{
+    const migratedBatchHistory = migrateHistoryItems([{
   id: 'legacy_batch',
   type: 'image',
   status: 'success',
@@ -301,14 +296,14 @@ const migratedBatchHistory = migrateHistoryItems([{
   naturalWidth: 1024,
   naturalHeight: 1024,
   createdAt: 1000,
-}])
-assertEqual(migratedBatchHistory.length, 3, 'legacy aggregate history splits into single-image records')
-assertEqual(migratedBatchHistory[0].batchId, 'legacy_batch', 'split history keeps shared batchId')
-assertEqual(migratedBatchHistory[0].batchIndex, 1, 'split history first index is 1-based')
-assertEqual(migratedBatchHistory[1].imageUrl, 'https://example.com/2.png', 'split history second image is standalone')
-assertEqual(migratedBatchHistory[2].batchTotal, 3, 'split history stores batchTotal')
+    }])
+    expect(migratedBatchHistory.length).toBe(3) // legacy aggregate history splits into single-image records
+    expect(migratedBatchHistory[0].batchId).toBe('legacy_batch') // split history keeps shared batchId
+    expect(migratedBatchHistory[0].batchIndex).toBe(1) // split history first index is 1-based
+    expect(migratedBatchHistory[1].imageUrl).toBe('https://example.com/2.png') // split history second image is standalone
+    expect(migratedBatchHistory[2].batchTotal).toBe(3) // split history stores batchTotal
 
-const sortedReferenceInputs = getImageGenInputs(
+    const sortedReferenceInputs = getImageGenInputs(
   'gen',
   [
     {
@@ -337,12 +332,12 @@ const sortedReferenceInputs = getImageGenInputs(
     { id: 'e2', source: 'img2', target: 'gen' },
     { id: 'e3', source: 'img3', target: 'gen' },
   ] as never,
-)
-assertEqual(sortedReferenceInputs.referenceImages.join(','), 'url-3,url-1,url-2', 'referenceImageOrder controls generation reference order')
-assertEqual(sortedReferenceInputs.normalizedReferenceImageOrder.join(','), 'img3,img1,img2', 'new connected reference appends to normalized order')
-assertEqual(sortedReferenceInputs.referenceImageNodes[0].label, '图1', 'reference labels follow current preview position')
+    )
+    expect(sortedReferenceInputs.referenceImages.join(','), 'url-3,url-1,url-2', 'referenceImageOrder controls generation reference order')
+    expect(sortedReferenceInputs.normalizedReferenceImageOrder.join(','), 'img3,img1,img2', 'new connected reference appends to normalized order')
+    expect(sortedReferenceInputs.referenceImageNodes[0].label).toBe('图1') // reference labels follow current preview position
 
-const cleanedReferenceInputs = getImageGenInputs(
+    const cleanedReferenceInputs = getImageGenInputs(
   'gen',
   [
     {
@@ -369,11 +364,11 @@ const cleanedReferenceInputs = getImageGenInputs(
     { id: 'e1', source: 'empty', target: 'gen' },
     { id: 'e2', source: 'valid', target: 'gen' },
   ] as never,
-)
-assertEqual(cleanedReferenceInputs.referenceImageNodes.length, 1, 'invalid connected image nodes do not enter preview items')
-assertEqual(cleanedReferenceInputs.normalizedReferenceImageOrder.join(','), 'valid', 'dirty referenceImageOrder keeps only valid connected image nodes')
+    )
+    expect(cleanedReferenceInputs.referenceImageNodes.length).toBe(1) // invalid connected image nodes do not enter preview items
+    expect(cleanedReferenceInputs.normalizedReferenceImageOrder.join(','), 'valid', 'dirty referenceImageOrder keeps only valid connected image nodes')
 
-const groupImageNodes: Node<CanvasNodeData>[] = [
+    const groupImageNodes: Node<CanvasNodeData>[] = [
   {
     id: 'group1',
     type: 'group',
@@ -406,16 +401,16 @@ const groupImageNodes: Node<CanvasNodeData>[] = [
     },
   },
   { id: 'group-empty', type: 'image_asset', position: { x: 0, y: 240 }, data: { nodeType: 'image_asset', title: 'empty', imageUrl: '', role: 'reference', createdAt: 1, updatedAt: 1 } },
-] as Node<CanvasNodeData>[]
+    ] as Node<CanvasNodeData>[]
 
-const resolvedGroupImages = resolveGroupImageOutputs('group1', groupImageNodes, [] as Edge[])
-assertEqual(
+    const resolvedGroupImages = resolveGroupImageOutputs('group1', groupImageNodes, [] as Edge[])
+    expect(
   resolvedGroupImages.map((image) => image.imageUrl).join(','),
   'url-group-left,url-group-right,url-group-gen-1,url-group-gen-2',
   'group image resolver sorts top-to-bottom then left-to-right and expands generated images'
-)
+    )
 
-const mixedGroupImageInputs = getImageGenInputs(
+    const mixedGroupImageInputs = getImageGenInputs(
   'gen-target',
   [
     ...groupImageNodes,
@@ -444,19 +439,19 @@ const mixedGroupImageInputs = getImageGenInputs(
     { id: 'e-group', source: 'group1', sourceHandle: 'image_collection_output', target: 'gen-target', targetHandle: 'reference_image' },
     { id: 'e-after', source: 'normal-after', sourceHandle: 'image_output', target: 'gen-target', targetHandle: 'reference_image' },
   ] as never,
-)
-assertEqual(
+    )
+    expect(
   mixedGroupImageInputs.referenceImages.join(','),
   'url-before,url-group-left,url-group-right,url-group-gen-1,url-group-gen-2,url-after',
   'image_gen expands group image collections in edge order alongside normal images'
-)
-assertEqual(
+    )
+    expect(
   mixedGroupImageInputs.normalizedReferenceImageOrder.join(','),
   'normal-before,group1:group-img-left,group1:group-img-right,group1:group-gen,group1:group-gen:1,normal-after',
   'group expanded images receive independent reference order keys'
-)
+    )
 
-const groupLLMInputs = getLLMInputs(
+    const groupLLMInputs = getLLMInputs(
   'llm-target',
   [
     ...groupImageNodes,
@@ -482,14 +477,14 @@ const groupLLMInputs = getLLMInputs(
     { id: 'e-group-llm', source: 'group1', sourceHandle: 'image_collection_output', target: 'llm-target', targetHandle: 'image_input' },
   ] as never,
   ''
-)
-assertEqual(
+    )
+    expect(
   groupLLMInputs.imageInputs.join(','),
   'url-group-left,url-group-right,url-group-gen-1,url-group-gen-2',
   'llm expands group image collections into image inputs'
-)
+    )
 
-const productAnalysisData = {
+    const productAnalysisData = {
   ...createDefaultProductAnalysisNodeData(1),
   productName: '恒温杯',
   productCategory: '智能家居',
@@ -498,55 +493,55 @@ const productAnalysisData = {
   coreFunction: '长时间保持饮品温热',
   scene: '办公室、书房、床头',
   targetAudience: '上班族、学生、夜间阅读人群',
-}
-assertEqual(productAnalysisData.analysisModel, DEFAULT_LLM_MODEL_ID, 'product analysis uses the same default model as llm nodes')
-assertEqual(productAnalysisData.commerceStyle, 'domestic', 'product analysis defaults to domestic commerce style')
-assertEqual(productAnalysisData.pageCount, 5, 'product analysis defaults to five pages')
-assertEqual(normalizeLLMModelId('legacy-missing-model'), DEFAULT_LLM_MODEL_ID, 'unknown llm model ids fall back to the shared default')
-const gptLLMPayload = buildLLMPayload({
+    }
+    expect(productAnalysisData.analysisModel).toBe(DEFAULT_LLM_MODEL_ID) // product analysis uses the same default model as llm nodes
+    expect(productAnalysisData.commerceStyle).toBe('domestic') // product analysis defaults to domestic commerce style
+    expect(productAnalysisData.pageCount).toBe(5) // product analysis defaults to five pages
+    expect(normalizeLLMModelId('legacy-missing-model')).toBe(DEFAULT_LLM_MODEL_ID) // unknown llm model ids fall back to the shared default
+    const gptLLMPayload = buildLLMPayload({
   modelId: 'gpt-5-5',
   messages: [{ role: 'user', content: 'hello' }],
-})
-assertEqual(gptLLMPayload.model, 'G-gpt-5.5', 'GPT LLM backend model must use G-gpt-5.5')
-const geminiLLMPayload = buildLLMPayload({
+    })
+    expect(gptLLMPayload.model).toBe('G-gpt-5.5') // GPT LLM backend model must use G-gpt-5.5
+    const geminiLLMPayload = buildLLMPayload({
   modelId: 'gemini-3-1-pro',
   messages: [{ role: 'user', content: 'hello' }],
-})
-assertEqual(geminiLLMPayload.model, 'G-gemini-3.1-pro', 'Gemini LLM backend model must use G-gemini-3.1-pro')
-assertEqual(
+    })
+    expect(geminiLLMPayload.model).toBe('G-gemini-3.1-pro') // Gemini LLM backend model must use G-gemini-3.1-pro
+    expect(
   extractLLMResponseContent({ choices: [{ message: { content: [{ type: 'text', text: 'content parts text' }] } }] }),
   'content parts text',
   'llm parser reads OpenAI content parts arrays'
-)
-assertEqual(
+    )
+    expect(
   extractLLMResponseContent({ choices: [{ text: 'legacy choice text' }] }),
   'legacy choice text',
   'llm parser reads choices[0].text fallback'
-)
-assertEqual(
+    )
+    expect(
   extractLLMResponseContent({ output: [{ type: 'message', content: [{ type: 'output_text', text: 'responses output text' }] }] }),
   'responses output text',
   'llm parser reads responses-style output content'
-)
-assertEqual(
+    )
+    expect(
   extractLLMResponseContent({ candidates: [{ content: { parts: [{ text: 'gemini candidate text' }] } }] }),
   'gemini candidate text',
   'llm parser reads gemini candidate text'
-)
-const productAnalysisPrompt = buildProductAnalysisPrompt(productAnalysisData, '上游信息：支持一机多用')
-assert(productAnalysisPrompt.includes('你必须只返回一个 JSON 对象。'), 'product analysis prompt requires json-only output')
-assert(productAnalysisPrompt.includes('【电商风格】'), 'product analysis prompt includes commerce style section')
-assert(productAnalysisPrompt.includes('国内电商风格'), 'product analysis prompt uses the default domestic commerce style')
-assert(productAnalysisPrompt.includes('【页数】\n5'), 'product analysis prompt includes default page count')
-assert(productAnalysisPrompt.includes('上游信息：支持一机多用'), 'product analysis prompt includes upstream text')
-assert(productAnalysisPrompt.includes('产品名称：恒温杯'), 'product analysis prompt includes product name')
-assert(productAnalysisPrompt.includes('"pagePlan"'), 'product analysis prompt asks for pagePlan json')
-assert(productAnalysisPrompt.includes('"finalPrompt"'), 'product analysis prompt asks for finalPrompt json')
+    )
+    const productAnalysisPrompt = buildProductAnalysisPrompt(productAnalysisData, '上游信息：支持一机多用')
+    expect(productAnalysisPrompt.includes('你必须只返回一个 JSON 对象。')).toBeTruthy() // product analysis prompt requires json-only output
+    expect(productAnalysisPrompt.includes('【电商风格】')).toBeTruthy() // product analysis prompt includes commerce style section
+    expect(productAnalysisPrompt.includes('国内电商风格')).toBeTruthy() // product analysis prompt uses the default domestic commerce style
+    expect(productAnalysisPrompt.includes('【页数】\n5')).toBeTruthy() // product analysis prompt includes default page count
+    expect(productAnalysisPrompt.includes('上游信息：支持一机多用')).toBeTruthy() // product analysis prompt includes upstream text
+    expect(productAnalysisPrompt.includes('产品名称：恒温杯')).toBeTruthy() // product analysis prompt includes product name
+    expect(productAnalysisPrompt.includes('"pagePlan"')).toBeTruthy() // product analysis prompt asks for pagePlan json
+    expect(productAnalysisPrompt.includes('"finalPrompt"')).toBeTruthy() // product analysis prompt asks for finalPrompt json
 
-const parsedProductAnalysis = parseProductAnalysisStructuredOutput(
+    const parsedProductAnalysis = parseProductAnalysisStructuredOutput(
   `<think>先分析，但这段应该被清理</think>
-\`\`\`json
-{
+    \`\`\`json
+    {
   "productName": "恒温杯",
   "productCategory": "智能家居",
   "material": "陶瓷内胆 / 恒温底座",
@@ -556,17 +551,17 @@ const parsedProductAnalysis = parseProductAnalysisStructuredOutput(
   "targetAudience": "上班族、学生、夜间阅读人群",
   "pagePlan": ["主视觉核心卖点", "功能展示"],
   "finalPrompt": "奶白色恒温杯置于办公桌上，干净电商主图"
-}
-\`\`\``,
+    }
+    \`\`\``,
   5,
-)
-assertEqual(parsedProductAnalysis.pagePlan.length, 5, 'product analysis parser pads pagePlan to selected page count')
-assertEqual(parsedProductAnalysis.productName, '恒温杯', 'product analysis parser extracts productName')
-const formattedProductAnalysis = formatProductAnalysisOutput(parsedProductAnalysis, 5)
-assert(formattedProductAnalysis.includes('【产品卖点分析】'), 'product analysis formatter includes title')
-assert(formattedProductAnalysis.includes('【5页页面规划】'), 'product analysis formatter includes selected page count')
-assert(formattedProductAnalysis.includes('【图片生成提示词】'), 'product analysis formatter includes image prompt section')
-assert(
+    )
+    expect(parsedProductAnalysis.pagePlan.length).toBe(5) // product analysis parser pads pagePlan to selected page count
+    expect(parsedProductAnalysis.productName).toBe('恒温杯') // product analysis parser extracts productName
+    const formattedProductAnalysis = formatProductAnalysisOutput(parsedProductAnalysis, 5)
+    expect(formattedProductAnalysis.includes('【产品卖点分析】')).toBeTruthy() // product analysis formatter includes title
+    expect(formattedProductAnalysis.includes('【5页页面规划】')).toBeTruthy() // product analysis formatter includes selected page count
+    expect(formattedProductAnalysis.includes('【图片生成提示词】')).toBeTruthy() // product analysis formatter includes image prompt section
+    expect(
   isConnectionAllowed({
     sourceType: 'text',
     sourceHandle: 'prompt',
@@ -574,8 +569,8 @@ assert(
     targetHandle: 'product_info_input',
   }),
   'text output can connect to product analysis input'
-)
-assert(
+    )
+    expect(
   isConnectionAllowed({
     sourceType: 'llm',
     sourceHandle: 'llm_output',
@@ -583,8 +578,8 @@ assert(
     targetHandle: 'product_info_input',
   }),
   'llm output can connect to product analysis input'
-)
-assert(
+    )
+    expect(
   isConnectionAllowed({
     sourceType: 'image_asset',
     sourceHandle: 'image_output',
@@ -592,8 +587,8 @@ assert(
     targetHandle: 'image_input',
   }),
   'image output can connect to product analysis image input'
-)
-assert(
+    )
+    expect(
   isConnectionAllowed({
     sourceType: 'product_analysis',
     sourceHandle: 'analysis_result_output',
@@ -601,8 +596,8 @@ assert(
     targetHandle: 'text_input',
   }),
   'product analysis result output can connect to llm text input'
-)
-assert(
+    )
+    expect(
   isConnectionAllowed({
     sourceType: 'product_analysis',
     sourceHandle: 'analysis_result_output',
@@ -610,8 +605,8 @@ assert(
     targetHandle: 'llm_input',
   }),
   'product analysis result output can connect to text input'
-)
-assert(
+    )
+    expect(
   !isConnectionAllowed({
     sourceType: 'product_analysis',
     sourceHandle: 'analysis_result_output',
@@ -619,9 +614,9 @@ assert(
     targetHandle: 'prompt',
   }),
   'product analysis must not connect directly to image generation'
-)
+    )
 
-const productAnalysisInputs = getProductAnalysisInputs(
+    const productAnalysisInputs = getProductAnalysisInputs(
   'analysis',
   [
     {
@@ -684,15 +679,15 @@ const productAnalysisInputs = getProductAnalysisInputs(
     { id: 'e-image-analysis', source: 'source-image', sourceHandle: 'image_output', target: 'analysis', targetHandle: 'image_input' },
     { id: 'e-analysis-text', source: 'analysis', sourceHandle: 'analysis_result_output', target: 'analysis-output-text', targetHandle: 'llm_input' },
   ] as never
-)
-assertEqual(productAnalysisInputs.connectedInputTextNodeCount, 2, 'product analysis counts connected upstream text inputs')
-assertEqual(productAnalysisInputs.connectedInputImageNodeCount, 1, 'product analysis counts connected upstream image inputs')
-assertEqual(productAnalysisInputs.imageInputs.join(','), 'url-product-image', 'product analysis reads connected image node input')
-assert(productAnalysisInputs.inputText.includes('补充说明：适合送礼'), 'product analysis reads text node input')
-assert(productAnalysisInputs.inputText.includes('竞品洞察：强调恒温稳定'), 'product analysis reads llm node output')
-assertEqual(productAnalysisInputs.connectedOutputTextNodeIds.join(','), 'analysis-output-text', 'product analysis detects downstream text nodes')
+    )
+    expect(productAnalysisInputs.connectedInputTextNodeCount).toBe(2) // product analysis counts connected upstream text inputs
+    expect(productAnalysisInputs.connectedInputImageNodeCount).toBe(1) // product analysis counts connected upstream image inputs
+    expect(productAnalysisInputs.imageInputs.join(','), 'url-product-image', 'product analysis reads connected image node input')
+    expect(productAnalysisInputs.inputText.includes('补充说明：适合送礼')).toBeTruthy() // product analysis reads text node input
+    expect(productAnalysisInputs.inputText.includes('竞品洞察：强调恒温稳定')).toBeTruthy() // product analysis reads llm node output
+    expect(productAnalysisInputs.connectedOutputTextNodeIds.join(','), 'analysis-output-text', 'product analysis detects downstream text nodes')
 
-const productAnalysisLLMInputs = getLLMInputs(
+    const productAnalysisLLMInputs = getLLMInputs(
   'llm-product',
   [
     {
@@ -727,8 +722,13 @@ const productAnalysisLLMInputs = getLLMInputs(
     { id: 'e-product-llm', source: 'analysis', sourceHandle: 'analysis_result_output', target: 'llm-product', targetHandle: 'text_input' },
   ] as never,
   ''
-)
-assertEqual(productAnalysisLLMInputs.connectedTextNodeCount, 1, 'llm counts connected product analysis as text input')
-assertEqual(productAnalysisLLMInputs.inputText, formattedProductAnalysis, 'llm reads formatted structured output from product analysis')
+    )
+    expect(productAnalysisLLMInputs.connectedTextNodeCount).toBe(1) // llm counts connected product analysis as text input
+    expect(productAnalysisLLMInputs.inputText).toBe(formattedProductAnalysis) // llm reads formatted structured output from product analysis
+
+    console.info('[image-model-system-test] all assertions passed')
+
+  })
+})
 
 console.info('[image-model-system-test] all assertions passed')

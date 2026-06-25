@@ -2,7 +2,11 @@ import { safeFetchJson, normalizeApiError } from '../utils/safeFetch'
 import { maskToken } from '../utils/maskToken'
 
 const DEFAULT_AUTODL_HOST = 'https://www.autodl.art'
-const DEFAULT_START_COMMAND = 'bash /root/zealman-app/scripts/improved-autostart.sh'
+/**
+ * 不要在此处暴露真实的服务器路径，改为通用占位说明。
+ * Do not expose real server paths here. Use a generic placeholder instead.
+ */
+const DEFAULT_START_COMMAND = 'bash /path/to/your-startup-script.sh'
 
 export type AutodlInstanceStatus = {
   instance_uuid: string
