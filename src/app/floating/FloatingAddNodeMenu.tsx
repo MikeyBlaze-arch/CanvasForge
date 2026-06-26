@@ -11,7 +11,7 @@ export function FloatingAddNodeMenu() {
   const menuPosition = useUIStore((s) => s.addNodeMenuPosition)
   const menuFlowPosition = useUIStore((s) => s.addNodeMenuFlowPosition)
   const menuRef = useRef<HTMLDivElement>(null)
-  const { addTextNode, addProductAnalysisNode, addImageAssetNode, addImageGenNode, addLLMNode, addVideoAssetNode, addMotionTransferNode, addVideoGenNode } = useNodeActions()
+  const { addTextNode, addProductAnalysisNode, addImageAssetNode, addImageGenNode, addLLMNode, addVideoAssetNode, addMotionTransferNode, addVideoGenNode, addImageCompareNode } = useNodeActions()
   const reactFlow = useReactFlow()
   const { t } = useI18n()
 
@@ -22,6 +22,7 @@ export function FloatingAddNodeMenu() {
         { id: 'text', icon: Type, label: t('addNode.text'), desc: t('addNode.text.desc') },
         { id: 'product_analysis', icon: ClipboardList, label: t('addNode.productAnalysis'), desc: t('addNode.productAnalysis.desc') },
         { id: 'image_asset', icon: ImageIcon, label: t('addNode.image'), desc: t('addNode.image.desc') },
+        { id: 'image_compare', icon: ImageIcon, label: t('addNode.imageCompare'), desc: t('addNode.imageCompare.desc') },
         { id: 'video_asset', icon: Video, label: t('addNode.videoAsset'), desc: t('addNode.videoAsset.desc') },
       ],
     },
@@ -108,6 +109,7 @@ export function FloatingAddNodeMenu() {
       case 'video_asset': addVideoAssetNode(basePos); break
       case 'video_gen': addVideoGenNode(basePos); break
       case 'motion_transfer': addMotionTransferNode(basePos); break
+      case 'image_compare': addImageCompareNode(basePos); break
       case 'upload': addImageAssetNode(basePos); break
     }
     setOpen(false)

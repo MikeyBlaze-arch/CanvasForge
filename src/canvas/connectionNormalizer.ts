@@ -95,6 +95,19 @@ const HANDLE_MAPPINGS: HandleMapping[] = [
   { sourceType: 'result_image', targetType: 'video_gen', mainSourceHandle: 'source_image', mainTargetHandle: 'main_input', realSourceHandle: 'source_image', realTargetHandle: 'image' },
   { sourceType: 'video_gen', targetType: 'video_asset', mainSourceHandle: 'main_output', mainTargetHandle: 'main_input', realSourceHandle: 'video', realTargetHandle: 'video_input' },
   { sourceType: 'video_gen', targetType: 'video_asset', mainSourceHandle: 'video', mainTargetHandle: 'main_input', realSourceHandle: 'video', realTargetHandle: 'video_input' },
+
+  { sourceType: 'image_asset', targetType: 'image_compare', mainSourceHandle: 'main_output', mainTargetHandle: 'main_input', realSourceHandle: 'image_output', realTargetHandle: 'compare_image' },
+  { sourceType: 'image_asset', targetType: 'image_compare', mainSourceHandle: 'reference_image', mainTargetHandle: 'main_input', realSourceHandle: 'reference_image', realTargetHandle: 'compare_image' },
+  { sourceType: 'image_asset', targetType: 'image_compare', mainSourceHandle: 'source_image', mainTargetHandle: 'main_input', realSourceHandle: 'source_image', realTargetHandle: 'compare_image' },
+
+  { sourceType: 'result_image', targetType: 'image_compare', mainSourceHandle: 'main_output', mainTargetHandle: 'main_input', realSourceHandle: 'reference_image', realTargetHandle: 'compare_image' },
+  { sourceType: 'result_image', targetType: 'image_compare', mainSourceHandle: 'reference_image', mainTargetHandle: 'main_input', realSourceHandle: 'reference_image', realTargetHandle: 'compare_image' },
+  { sourceType: 'result_image', targetType: 'image_compare', mainSourceHandle: 'source_image', mainTargetHandle: 'main_input', realSourceHandle: 'source_image', realTargetHandle: 'compare_image' },
+
+  { sourceType: 'image_gen', targetType: 'image_compare', mainSourceHandle: 'main_output', mainTargetHandle: 'main_input', realSourceHandle: 'generated_image', realTargetHandle: 'compare_image' },
+  { sourceType: 'image_gen', targetType: 'image_compare', mainSourceHandle: 'output', mainTargetHandle: 'main_input', realSourceHandle: 'output', realTargetHandle: 'compare_image' },
+
+  { sourceType: 'group', targetType: 'image_compare', mainSourceHandle: 'image_collection_output', mainTargetHandle: 'main_input', realSourceHandle: 'image_collection_output', realTargetHandle: 'compare_image' },
 ]
 
 function getNodeType(nodes: Node<CanvasNodeData>[], id: string | null | undefined): string | undefined {

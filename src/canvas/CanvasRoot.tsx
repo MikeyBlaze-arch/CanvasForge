@@ -37,6 +37,7 @@ import { GroupNodeComponent } from './nodes/GroupNode'
 import { VideoAssetNodeComponent } from './nodes/VideoAssetNode'
 import { VideoGenNodeComponent } from './nodes/VideoGenNode'
 import { MotionTransferNodeComponent } from './nodes/MotionTransferNode'
+import { ImageCompareNodeComponent } from './nodes/ImageCompareNode'
 import { useUIStore } from '../store/uiStore'
 import { useCanvasStore } from '../store/canvasStore'
 import { useUndoRedoStore } from '../store/undoRedoStore'
@@ -60,6 +61,7 @@ const nodeTypes = {
   video_asset: VideoAssetNodeComponent,
   motion_transfer: MotionTransferNodeComponent,
   video_gen: VideoGenNodeComponent,
+  image_compare: ImageCompareNodeComponent,
 }
 
 const edgeTypes = {

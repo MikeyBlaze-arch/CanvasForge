@@ -13,6 +13,7 @@ const TYPE_ICONS: Record<string, React.ReactNode> = {
   motion_transfer: <Move size={12} />,
   video_asset: <Video size={12} />,
   video_gen: <Film size={12} />,
+  image_compare: <ImageIcon size={12} />,
 }
 
 const TYPE_LABEL_KEYS: Record<string, string> = {
@@ -26,6 +27,7 @@ const TYPE_LABEL_KEYS: Record<string, string> = {
   motion_transfer: 'motion.title',
   video_asset: 'video.title',
   video_gen: 'node.videoGen',
+  image_compare: 'node.imageCompare',
 }
 
 type Props = {

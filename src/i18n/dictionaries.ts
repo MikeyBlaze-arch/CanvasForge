@@ -40,6 +40,7 @@ const enUS: Dictionary = {
   'common.clear': 'Clear',
   'common.all': 'All',
   'common.image': 'Image',
+  'common.images': 'images',
   'common.video': 'Video',
   'common.source': 'Source',
   'common.basic': 'Basic',
@@ -89,6 +90,8 @@ const enUS: Dictionary = {
   'addNode.videoGen.desc': 'Generate videos with Grok / Omni / Seedance / Veo',
   'addNode.videoAsset': 'Video',
   'addNode.videoAsset.desc': 'Upload video file',
+  'addNode.imageCompare': 'Image Compare',
+  'addNode.imageCompare.desc': 'Compare connected images visually',
 
   'node.text': 'Text Node',
   'node.productAnalysis': '产品卖点分析',
@@ -100,6 +103,7 @@ const enUS: Dictionary = {
   'node.llm': 'Language Model',
   'node.result': 'Result',
   'node.group': 'Group',
+  'node.imageCompare': 'Image Compare',
   'node.prompt': 'Prompt',
   'node.output': 'Output',
   'node.reference': 'Reference',
@@ -169,6 +173,10 @@ const enUS: Dictionary = {
   'imageNode.port.imageOut': 'image out',
   'imageNode.port.ref': 'ref',
   'imageNode.port.source': 'source',
+
+  'imageCompare.empty': 'Connect image nodes to compare',
+  'imageCompare.single': 'Single image preview',
+  'imageCompare.tip': 'Click thumbnail for B, Alt/Option-click for A',
 
   'imageGen.series': 'Series',
   'imageGen.model': 'Model',
@@ -328,6 +336,7 @@ const enUS: Dictionary = {
   'inspector.type.llm': 'LLM Agent',
   'inspector.type.resultImage': 'Result Image',
   'inspector.type.group': 'Group',
+  'inspector.type.imageCompare': 'Image Compare',
 
   'status.idle': 'Idle',
   'status.generating': 'Generating',
@@ -711,6 +720,7 @@ const zhCN: Dictionary = {
   'common.clear': '清空',
   'common.all': '全部',
   'common.image': '图片',
+  'common.images': '张图片',
   'common.video': '视频',
   'common.source': '来源',
   'common.basic': '基础',
@@ -760,6 +770,8 @@ const zhCN: Dictionary = {
   'addNode.videoGen.desc': '使用视频模型生成视频',
   'addNode.videoAsset': '视频',
   'addNode.videoAsset.desc': '上传视频文件',
+  'addNode.imageCompare': '图像对比',
+  'addNode.imageCompare.desc': '对连接的图片进行视觉对比',
 
   'node.text': '文本节点',
   'node.productAnalysis': '产品卖点分析',
@@ -771,6 +783,7 @@ const zhCN: Dictionary = {
   'node.llm': '语言模型',
   'node.result': '结果',
   'node.group': '分组',
+  'node.imageCompare': '图像对比',
   'node.prompt': '提示词',
   'node.output': '输出',
   'node.reference': '参考图',
@@ -840,6 +853,10 @@ const zhCN: Dictionary = {
   'imageNode.port.imageOut': '图片输出',
   'imageNode.port.ref': '参考',
   'imageNode.port.source': '源',
+
+  'imageCompare.empty': '连接图片节点进行对比',
+  'imageCompare.single': '单图预览',
+  'imageCompare.tip': '点击缩略图设为 B，Alt/Option + 点击设为 A',
 
   'imageGen.series': '系列',
   'imageGen.model': '模型',
@@ -999,6 +1016,7 @@ const zhCN: Dictionary = {
   'inspector.type.llm': '语言模型',
   'inspector.type.resultImage': '结果图片',
   'inspector.type.group': '分组',
+  'inspector.type.imageCompare': '图像对比',
 
   'status.idle': '空闲',
   'status.generating': '生成中',

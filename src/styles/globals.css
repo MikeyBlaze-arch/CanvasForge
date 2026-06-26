@@ -208,6 +208,7 @@ a { color: var(--text-accent); text-decoration: none; }
 .node-type-badge.text { background: var(--control-bg); color: var(--text-secondary); }
 .node-type-badge.image_asset { background: var(--control-bg); color: var(--text-secondary); }
 .node-type-badge.image_gen { background: var(--control-bg); color: var(--text-secondary); }
+.node-type-badge.image_compare { background: var(--control-bg); color: var(--text-secondary); }
 .node-type-badge.llm { background: var(--control-bg); color: var(--text-secondary); }
 .node-type-badge.result_image { background: var(--control-bg); color: var(--text-secondary); }
 .node-type-badge.group { background: var(--field-bg); color: var(--text-muted); }

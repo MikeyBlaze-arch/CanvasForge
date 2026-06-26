@@ -23,6 +23,7 @@ export const LEGACY_HANDLE_MAP: Record<string, Record<string, string>> = {
   product_analysis: {
     text_output: 'analysis_result_output',
   },
+  image_compare: {},
 }
 
 export function resolveHandleId(nodeType: string, handleId: string | null | undefined): string | null {
@@ -140,6 +141,21 @@ export const CONNECTION_RULES: NodeConnectionRule[] = [
 
   { sourceType: 'video_gen', sourceHandle: 'main_output', targetType: 'video_asset', targetHandle: 'main_input' },
   { sourceType: 'video_gen', sourceHandle: 'video', targetType: 'video_asset', targetHandle: 'video_input' },
+
+  { sourceType: 'image_asset', sourceHandle: 'main_output', targetType: 'image_compare', targetHandle: 'main_input' },
+  { sourceType: 'image_asset', sourceHandle: 'image_output', targetType: 'image_compare', targetHandle: 'compare_image' },
+  { sourceType: 'image_asset', sourceHandle: 'reference_image', targetType: 'image_compare', targetHandle: 'compare_image' },
+  { sourceType: 'image_asset', sourceHandle: 'source_image', targetType: 'image_compare', targetHandle: 'compare_image' },
+
+  { sourceType: 'result_image', sourceHandle: 'main_output', targetType: 'image_compare', targetHandle: 'main_input' },
+  { sourceType: 'result_image', sourceHandle: 'reference_image', targetType: 'image_compare', targetHandle: 'compare_image' },
+  { sourceType: 'result_image', sourceHandle: 'source_image', targetType: 'image_compare', targetHandle: 'compare_image' },
+
+  { sourceType: 'image_gen', sourceHandle: 'main_output', targetType: 'image_compare', targetHandle: 'main_input' },
+  { sourceType: 'image_gen', sourceHandle: 'generated_image', targetType: 'image_compare', targetHandle: 'compare_image' },
+  { sourceType: 'image_gen', sourceHandle: 'output', targetType: 'image_compare', targetHandle: 'compare_image' },
+
+  { sourceType: 'group', sourceHandle: 'image_collection_output', targetType: 'image_compare', targetHandle: 'compare_image' },
 ]
 
 export function isConnectionAllowed(params: {

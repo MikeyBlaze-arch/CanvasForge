@@ -13,6 +13,7 @@ import type {
   VideoAssetNodeData,
   MotionTransferNodeData,
   VideoGenNodeData,
+  ImageCompareNodeData,
 } from '../nodeTypes'
 import { DEFAULT_VIDEO_MODEL_ID, getVideoModelById } from '../../generation/videoModelRegistry'
 import { DEFAULT_LLM_MODEL_ID } from '../../generation/llmModelRegistry'
@@ -235,6 +236,26 @@ export function useNodeActions() {
     [addNode]
   )
 
+  const addImageCompareNode = useCallback(
+    (position: { x: number; y: number }) => {
+      const id = createNodeId()
+      addNode({
+        id,
+        type: 'image_compare',
+        position,
+        data: {
+          nodeType: 'image_compare',
+          title: t('node.imageCompare'),
+          sliderPercent: 50,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        } satisfies ImageCompareNodeData,
+      })
+      return id
+    },
+    [addNode]
+  )
+
   const deleteNode = useCallback(
     (id: string) => {
       useUndoRedoStore.getState().capture('Delete node')
@@ -261,6 +282,7 @@ export function useNodeActions() {
     addVideoAssetNode,
     addMotionTransferNode,
     addVideoGenNode,
+    addImageCompareNode,
     deleteNode,
     duplicateNode,
   }

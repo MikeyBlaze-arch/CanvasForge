@@ -22,6 +22,7 @@ const NODE_GROUPS: NodeGroup[] = [
       { type: 'text', labelKey: 'addNode.text', descKey: 'addNode.text.desc', color: 'var(--node-text)' },
       { type: 'product_analysis', labelKey: 'addNode.productAnalysis', descKey: 'addNode.productAnalysis.desc', color: '#14b8a6' },
       { type: 'image_asset', labelKey: 'addNode.image', descKey: 'addNode.image.desc', color: 'var(--node-image)' },
+      { type: 'image_compare', labelKey: 'addNode.imageCompare', descKey: 'addNode.imageCompare.desc', color: 'var(--node-image)' },
       { type: 'video_asset', labelKey: 'addNode.videoAsset', descKey: 'addNode.videoAsset.desc', color: '#8b5cf6' },
     ],
   },
@@ -48,7 +49,7 @@ const NODE_GROUPS: NodeGroup[] = [
 ]
 
 export function LeftNodeLibrary() {
-  const { addTextNode, addProductAnalysisNode, addImageAssetNode, addImageGenNode, addLLMNode, addGroupNode, addVideoAssetNode, addMotionTransferNode, addVideoGenNode } = useNodeActions()
+  const { addTextNode, addProductAnalysisNode, addImageAssetNode, addImageGenNode, addLLMNode, addGroupNode, addVideoAssetNode, addMotionTransferNode, addVideoGenNode, addImageCompareNode } = useNodeActions()
   const reactFlow = useReactFlow()
   const { t } = useI18n()
   const [search, setSearch] = useState('')
@@ -68,6 +69,7 @@ export function LeftNodeLibrary() {
       case 'video_asset': addVideoAssetNode(center); break
       case 'video_gen': addVideoGenNode(center); break
       case 'motion_transfer': addMotionTransferNode(center); break
+      case 'image_compare': addImageCompareNode(center); break
     }
   }
 

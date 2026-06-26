@@ -431,6 +431,19 @@ export type VideoGenNodeData = {
   updatedAt: number
 }
 
+export type ImageCompareNodeData = {
+  nodeType: 'image_compare'
+  title: string
+  /** Split slider percentage, 0-100. Default 50. */
+  sliderPercent?: number
+  /** Optional selected left image source node id when more than 2 images are connected. */
+  activeLeftSourceId?: string
+  /** Optional selected right image source node id when more than 2 images are connected. */
+  activeRightSourceId?: string
+  createdAt: number
+  updatedAt: number
+}
+
 export type CanvasNodeData =
   | TextNodeData
   | ProductAnalysisNodeData
@@ -442,6 +455,7 @@ export type CanvasNodeData =
   | VideoAssetNodeData
   | MotionTransferNodeData
   | VideoGenNodeData
+  | ImageCompareNodeData
 
 export type HistoryRecord = {
   id: string

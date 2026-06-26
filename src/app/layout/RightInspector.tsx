@@ -26,6 +26,7 @@ export function RightInspector() {
     llm: t('inspector.type.llm'),
     result_image: t('inspector.type.resultImage'),
     group: t('inspector.type.group'),
+    image_compare: t('inspector.type.imageCompare'),
   }
 
   return (
