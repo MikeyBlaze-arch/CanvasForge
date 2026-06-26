@@ -66,21 +66,19 @@ const edgeTypes = {
   canvas: CanvasEdge,
 }
 
-const VIEWPORT_ZOOM_STEP = 0.05
-
-function snapViewportZoom(zoom: number) {
-  return Number((Math.round(zoom / VIEWPORT_ZOOM_STEP) * VIEWPORT_ZOOM_STEP).toFixed(2))
-}
-
 function roundViewportCoord(value: number) {
   return Number(value.toFixed(2))
+}
+
+function roundViewportZoom(value: number) {
+  return Number(value.toFixed(4))
 }
 
 function normalizeViewportForStorage(vp: Viewport): Viewport {
   return {
     x: roundViewportCoord(vp.x),
     y: roundViewportCoord(vp.y),
-    zoom: snapViewportZoom(vp.zoom),
+    zoom: roundViewportZoom(vp.zoom),
   }
 }
 
@@ -402,12 +400,6 @@ export function CanvasRoot() {
     })
   }, [])
 
-  const onViewportMoveEnd = useCallback((_event: MouseEvent | TouchEvent | null, viewport: Viewport) => {
-    const snappedZoom = snapViewportZoom(viewport.zoom)
-    if (Math.abs(snappedZoom - viewport.zoom) < 0.001) return
-    reactFlow.zoomTo(snappedZoom, { duration: 80 })
-  }, [reactFlow])
-
 
   return (
     <div className={`canvas-root${interactionClass ? ' ' + interactionClass : ''}`}>
@@ -444,7 +436,6 @@ export function CanvasRoot() {
         onDragOver={onDragOver}
         onDrop={onDrop}
         onViewportChange={onViewportChange}
-        onMoveEnd={onViewportMoveEnd}
         onMove={onMove}
         fitView
         style={{ background: 'transparent' }}
