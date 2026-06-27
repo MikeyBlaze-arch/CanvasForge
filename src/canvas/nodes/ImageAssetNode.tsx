@@ -6,7 +6,7 @@ import { PortLabel } from '../../components/PortLabel'
 import { useNodeStore } from '../../store/nodeStore'
 import type { ImageAssetNodeData } from '../nodeTypes'
 import { useI18n } from '../../i18n/useI18n'
-import { readImageFile } from '../imageFileUtils'
+import { isImageFile, readImageFile } from '../imageFileUtils'
 import { downloadImage } from '../../utils/downloadImage'
 import { getImageDimensions, calcThumbnailSize } from '../../utils/imageDimensions'
 import { useUIStore } from '../../store/uiStore'
@@ -28,8 +28,10 @@ export const ImageAssetNodeComponent = React.memo(function ImageAssetNodeCompone
   const updateNodeData = useNodeStore((s) => s.updateNodeData)
   const fileRef = useRef<HTMLInputElement>(null)
   const dimsLoadedRef = useRef(false)
+  const dragDepthRef = useRef(0)
   const [previewCropStyle, setPreviewCropStyle] = useState<React.CSSProperties>({})
   const [previewOpen, setPreviewOpen] = useState(false)
+  const [isDragOver, setIsDragOver] = useState(false)
   const { t } = useI18n()
   const viewportZoom = useUIStore((s) => s.viewportZoom)
   const nodeWidth = getNodeCardWidth(d)
@@ -93,12 +95,12 @@ export const ImageAssetNodeComponent = React.memo(function ImageAssetNodeCompone
     [id, d.naturalWidth, d.naturalHeight, updateNodeData]
   )
 
-  const handleFile = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0]
-      if (!file) return
+  const replaceWithFile = useCallback(
+    (file: File) => {
+      if (!isImageFile(file)) return
       dimsLoadedRef.current = false
       setPreviewCropStyle({})
+      setPreviewOpen(false)
       readImageFile(file)
         .then((result) => {
           const output = {
@@ -130,6 +132,47 @@ export const ImageAssetNodeComponent = React.memo(function ImageAssetNodeCompone
     },
     [updateWithThumbnail]
   )
+
+  const handleFile = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0]
+      if (file) replaceWithFile(file)
+      e.target.value = ''
+    },
+    [replaceWithFile]
+  )
+
+  const handleImageDragEnter = useCallback((event: React.DragEvent<HTMLDivElement>) => {
+    if (!Array.from(event.dataTransfer.items).some((item) => item.kind === 'file' && item.type.startsWith('image/'))) return
+    event.preventDefault()
+    event.stopPropagation()
+    dragDepthRef.current += 1
+    setIsDragOver(true)
+  }, [])
+
+  const handleImageDragOver = useCallback((event: React.DragEvent<HTMLDivElement>) => {
+    if (!Array.from(event.dataTransfer.items).some((item) => item.kind === 'file' && item.type.startsWith('image/'))) return
+    event.preventDefault()
+    event.stopPropagation()
+    event.dataTransfer.dropEffect = 'copy'
+  }, [])
+
+  const handleImageDragLeave = useCallback((event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault()
+    event.stopPropagation()
+    dragDepthRef.current = Math.max(0, dragDepthRef.current - 1)
+    if (dragDepthRef.current === 0) setIsDragOver(false)
+  }, [])
+
+  const handleImageDrop = useCallback((event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault()
+    event.stopPropagation()
+    dragDepthRef.current = 0
+    setIsDragOver(false)
+
+    const file = Array.from(event.dataTransfer.files).find(isImageFile)
+    if (file) replaceWithFile(file)
+  }, [replaceWithFile])
 
   const handleClear = useCallback(() => {
     dimsLoadedRef.current = false
@@ -169,7 +212,14 @@ export const ImageAssetNodeComponent = React.memo(function ImageAssetNodeCompone
   return (
     <NodeShell nodeType="image_asset" title={`${t('node.image')}${dimensionsLabel}`} selected={!!selected} width={nodeWidth}>
       {d.imageUrl ? (
-        <div className="image-node-preview-wrap" onDoubleClick={handleDoubleClick}>
+        <div
+          className={['image-node-preview-wrap', isDragOver ? 'image-node-drag-over' : ''].filter(Boolean).join(' ')}
+          onDoubleClick={handleDoubleClick}
+          onDragEnter={handleImageDragEnter}
+          onDragOver={handleImageDragOver}
+          onDragLeave={handleImageDragLeave}
+          onDrop={handleImageDrop}
+        >
           <img src={previewImageUrl} alt={d.fileName || 'asset'} style={previewCropStyle} decoding="async" loading="lazy" />
           <div className="image-node-overlay">
             <button className="image-node-overlay-btn" onClick={() => fileRef.current?.click()} title={t('imageNode.replace')}>
@@ -184,7 +234,14 @@ export const ImageAssetNodeComponent = React.memo(function ImageAssetNodeCompone
           </div>
         </div>
       ) : (
-        <div className="image-node-placeholder" onClick={() => fileRef.current?.click()}>
+        <div
+          className={['image-node-placeholder', isDragOver ? 'image-node-drag-over' : ''].filter(Boolean).join(' ')}
+          onClick={() => fileRef.current?.click()}
+          onDragEnter={handleImageDragEnter}
+          onDragOver={handleImageDragOver}
+          onDragLeave={handleImageDragLeave}
+          onDrop={handleImageDrop}
+        >
           <ImageIcon size={28} strokeWidth={1.2} />
           <span style={{ fontSize: 11 }}>{t('imageNode.empty')}</span>
         </div>

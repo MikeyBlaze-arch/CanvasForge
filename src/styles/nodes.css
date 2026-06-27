@@ -1221,6 +1221,13 @@ textarea.product-analysis-input {
   background: var(--field-bg);
 }
 
+.image-node-placeholder.image-node-drag-over,
+.image-node-preview-wrap.image-node-drag-over {
+  border-color: var(--border-secondary);
+  background: color-mix(in srgb, var(--field-bg) 86%, var(--text-primary) 14%);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--border-secondary) 55%, transparent);
+}
+
 .image-node-preview-wrap {
   position: relative;
   display: flex;
@@ -1231,6 +1238,7 @@ textarea.product-analysis-input {
   max-height: 320px;
   overflow: hidden;
   background: var(--bg-primary, transparent);
+  border: 1px solid transparent;
   border-radius: 10px;
 }
 .image-node-preview-wrap img {
