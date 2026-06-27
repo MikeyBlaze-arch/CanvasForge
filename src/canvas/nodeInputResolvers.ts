@@ -14,6 +14,7 @@ import {
   getGroupImageOutputKey,
   resolveGroupImageOutputs,
 } from './groupImageOutputs'
+import { getImageSourceUrl } from './imageSourceUtils'
 
 type NodeMatch = {
   edge: Edge
@@ -85,12 +86,7 @@ function sortTextMatches(matches: NodeMatch[]): NodeMatch[] {
 }
 
 function getImageUrl(data: CanvasNodeData): string | undefined {
-  if (data.nodeType === 'image_gen') {
-    const imageGenData = data as ImageGenNodeData
-    return imageGenData.lastGeneratedImageUrl || imageGenData.lastOutputImageUrls?.[0]
-  }
-  if (data.nodeType !== 'image_asset' && data.nodeType !== 'result_image') return undefined
-  return (data as ImageAssetNodeData | ResultImageNodeData).imageUrl || undefined
+  return getImageSourceUrl(data, 'payload')
 }
 
 function getImageDimensions(data: CanvasNodeData): { naturalWidth?: number; naturalHeight?: number } {
@@ -232,7 +228,7 @@ export function getImageGenInputs(
           edge,
           edgeIndex,
           node: sourceNode,
-          imageUrl: image.imageUrl,
+          imageUrl: image.payloadUrl ?? image.imageUrl,
           referenceKey: getGroupImageOutputKey(image),
           sourceNodeId: image.sourceNodeId,
           groupNodeId: sourceNode.id,
@@ -350,7 +346,7 @@ export function getLLMInputs(
 
     if (sourceData.nodeType === 'group' && sourceHandle === IMAGE_COLLECTION_OUTPUT_HANDLE) {
       connectedImageNodeCount += 1
-      imageInputs.push(...resolveGroupImageOutputs(sourceNode.id, nodes, edges).map((image) => image.imageUrl))
+      imageInputs.push(...resolveGroupImageOutputs(sourceNode.id, nodes, edges).map((image) => image.payloadUrl ?? image.imageUrl))
     }
   })
 
@@ -427,7 +423,7 @@ export function getProductAnalysisInputs(
 
     if (sourceData.nodeType === 'group' && sourceHandle === IMAGE_COLLECTION_OUTPUT_HANDLE) {
       connectedInputImageNodeCount += 1
-      imageInputs.push(...resolveGroupImageOutputs(sourceNode.id, nodes, edges).map((image) => image.imageUrl))
+      imageInputs.push(...resolveGroupImageOutputs(sourceNode.id, nodes, edges).map((image) => image.payloadUrl ?? image.imageUrl))
     }
   })
 
