@@ -564,7 +564,7 @@ function RemoteServiceTab() {
         <div style={{ display: 'flex', gap: 6 }}>
           <input type="text" className="api-settings-input" value={zealmanUrl}
             onChange={(e) => { setZealmanUrl(e.target.value); setPanelTestResult('idle') }}
-            placeholder="https://your-zealman-panel-domain:port" autoComplete="off"
+            placeholder={t('autodl.zealmanUrlPlaceholder')} autoComplete="off"
             style={{ flex: 1 }} />
           <button className="cf-btn" onClick={handleTestPanel} disabled={isLoading || loadingTestPanel}
             style={{ flexShrink: 0, whiteSpace: 'nowrap' }}>

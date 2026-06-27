@@ -203,7 +203,7 @@ const countBySeries = (series: 'G' | 'R' | 'C') => IMAGE_MODEL_REGISTRY.filter((
     expect(IMAGE_MODEL_REGISTRY.every((m) => !/-[124]k$/i.test(m.backendModel))).toBeTruthy() // No registry backendModel has a resolution suffix
 
     const authHeaders = { Authorization: 'Bearer test' }
-    const gptModel = getImageModelById('r-gpt-image-2-vip')
+    const gptModel = getImageModelById('r-gpt-image-2-vip')!
     expect(gptModel).toBeTruthy() // R VIP model exists
     const gptRoute = await buildImageGenerationRequest({
   payload: {
@@ -220,7 +220,7 @@ const countBySeries = (series: 'G' | 'R' | 'C') => IMAGE_MODEL_REGISTRY.filter((
     })
     expect(gptRoute.endpoint).toBe('https://relay.example/v1/images/generations') // GPT text endpoint
     expect(gptRoute.debugInfo.contentType).toBe('application/json') // GPT text content type
-    expect(gptRoute.debugInfo.payloadKeys.join(','), 'model,n,prompt,size', 'GPT text payload keys must be clean')
+    expect(gptRoute.debugInfo.payloadKeys.join(',')).toBe('model,n,prompt,size') // GPT text payload keys must be clean
 
     const png1x1 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII='
     const gptEditRoute = await buildImageGenerationRequest({
@@ -238,9 +238,9 @@ const countBySeries = (series: 'G' | 'R' | 'C') => IMAGE_MODEL_REGISTRY.filter((
     })
     expect(gptEditRoute.endpoint).toBe('https://relay.example/v1/images/edits') // GPT image endpoint
     expect(gptEditRoute.debugInfo.contentType).toBe('multipart/form-data') // GPT image content type
-    expect(gptEditRoute.debugInfo.payloadKeys.join(','), 'image,model,n,prompt,size', 'GPT image payload keys must be clean')
+    expect(gptEditRoute.debugInfo.payloadKeys.join(',')).toBe('image,model,n,prompt,size') // GPT image payload keys must be clean
 
-    const nanoModel = getImageModelById('g-nano-banana-pro-vt')
+    const nanoModel = getImageModelById('g-nano-banana-pro-vt')!
     expect(nanoModel).toBeTruthy() // Nano model exists
     const nanoRoute = await buildImageGenerationRequest({
   payload: nano4k,
@@ -260,7 +260,7 @@ const countBySeries = (series: 'G' | 'R' | 'C') => IMAGE_MODEL_REGISTRY.filter((
   authHeaders,
     })
     expect(nanoRefRoute.endpoint).toBe('https://relay.example/v1beta/models/G-nano-banana-pro-vt:generateContent') // Nano image endpoint
-    expect(nanoRefRoute.debugInfo.payloadKeys.join(','), 'contents,generationConfig', 'Nano image payload follows Gemini-style PixelForge path')
+    expect(nanoRefRoute.debugInfo.payloadKeys.join(',')).toBe('contents,generationConfig') // Nano image payload follows Gemini-style PixelForge path
 
     const parsedMultiUrl = parseImageGenerationResponse({ data: [{ url: 'https://example.com/a.png' }, { url: 'https://example.com/b.png' }] })
     expect(parsedMultiUrl.images.length).toBe(2) // parser data[] url count
@@ -272,7 +272,7 @@ const countBySeries = (series: 'G' | 'R' | 'C') => IMAGE_MODEL_REGISTRY.filter((
     expect(parsedMultiBase64.matchedField).toBe('data[0].b64_json') // parser data[0].b64_json
     expect(Boolean(parsedMultiBase64.dataUrl)).toBeTruthy() // parser first b64 compatibility
 
-    expect(parseImageGenerationResponse({ candidates: [{ content: { parts: [{ inlineData: { mimeType: 'image/png', data: 'a'.repeat(128) } }] } }] }).matchedField, 'candidates[0].content.parts[0].inlineData', 'parser inlineData')
+    expect(parseImageGenerationResponse({ candidates: [{ content: { parts: [{ inlineData: { mimeType: 'image/png', data: 'a'.repeat(128) } }] } }] }).matchedField).toBe('candidates[0].content.parts[0].inlineData') // parser inlineData
     expect(parseImageGenerationResponse({ output_url: 'https://example.com/out.png' }).matchedField).toBe('output_url') // parser output_url
     expect(parseImageGenerationResponse('![x](https://example.com/md.png)').matchedField).toBe('.markdown_image') // parser markdown image
     expect(parseImageGenerationResponse({ output_url: 'https://example.com/out.png' }).images.length).toBe(1) // parser single image wraps in images[]
@@ -333,8 +333,8 @@ const countBySeries = (series: 'G' | 'R' | 'C') => IMAGE_MODEL_REGISTRY.filter((
     { id: 'e3', source: 'img3', target: 'gen' },
   ] as never,
     )
-    expect(sortedReferenceInputs.referenceImages.join(','), 'url-3,url-1,url-2', 'referenceImageOrder controls generation reference order')
-    expect(sortedReferenceInputs.normalizedReferenceImageOrder.join(','), 'img3,img1,img2', 'new connected reference appends to normalized order')
+    expect(sortedReferenceInputs.referenceImages.join(',')).toBe('url-3,url-1,url-2') // referenceImageOrder controls generation reference order
+    expect(sortedReferenceInputs.normalizedReferenceImageOrder.join(',')).toBe('img3,img1,img2') // new connected reference appends to normalized order
     expect(sortedReferenceInputs.referenceImageNodes[0].label).toBe('图1') // reference labels follow current preview position
 
     const cleanedReferenceInputs = getImageGenInputs(
@@ -366,7 +366,7 @@ const countBySeries = (series: 'G' | 'R' | 'C') => IMAGE_MODEL_REGISTRY.filter((
   ] as never,
     )
     expect(cleanedReferenceInputs.referenceImageNodes.length).toBe(1) // invalid connected image nodes do not enter preview items
-    expect(cleanedReferenceInputs.normalizedReferenceImageOrder.join(','), 'valid', 'dirty referenceImageOrder keeps only valid connected image nodes')
+    expect(cleanedReferenceInputs.normalizedReferenceImageOrder.join(',')).toBe('valid') // dirty referenceImageOrder keeps only valid connected image nodes
 
     const groupImageNodes: Node<CanvasNodeData>[] = [
   {
@@ -404,11 +404,7 @@ const countBySeries = (series: 'G' | 'R' | 'C') => IMAGE_MODEL_REGISTRY.filter((
     ] as Node<CanvasNodeData>[]
 
     const resolvedGroupImages = resolveGroupImageOutputs('group1', groupImageNodes, [] as Edge[])
-    expect(
-  resolvedGroupImages.map((image) => image.imageUrl).join(','),
-  'url-group-left,url-group-right,url-group-gen-1,url-group-gen-2',
-  'group image resolver sorts top-to-bottom then left-to-right and expands generated images'
-    )
+    expect(resolvedGroupImages.map((image) => image.imageUrl).join(',')).toBe('url-group-left,url-group-right,url-group-gen-1,url-group-gen-2') // group image resolver sorts top-to-bottom then left-to-right and expands generated images
 
     const mixedGroupImageInputs = getImageGenInputs(
   'gen-target',
@@ -440,16 +436,8 @@ const countBySeries = (series: 'G' | 'R' | 'C') => IMAGE_MODEL_REGISTRY.filter((
     { id: 'e-after', source: 'normal-after', sourceHandle: 'image_output', target: 'gen-target', targetHandle: 'reference_image' },
   ] as never,
     )
-    expect(
-  mixedGroupImageInputs.referenceImages.join(','),
-  'url-before,url-group-left,url-group-right,url-group-gen-1,url-group-gen-2,url-after',
-  'image_gen expands group image collections in edge order alongside normal images'
-    )
-    expect(
-  mixedGroupImageInputs.normalizedReferenceImageOrder.join(','),
-  'normal-before,group1:group-img-left,group1:group-img-right,group1:group-gen,group1:group-gen:1,normal-after',
-  'group expanded images receive independent reference order keys'
-    )
+    expect(mixedGroupImageInputs.referenceImages.join(',')).toBe('url-before,url-group-left,url-group-right,url-group-gen-1,url-group-gen-2,url-after') // image_gen expands group image collections in edge order alongside normal images
+    expect(mixedGroupImageInputs.normalizedReferenceImageOrder.join(',')).toBe('normal-before,group1:group-img-left,group1:group-img-right,group1:group-gen,group1:group-gen:1,normal-after') // group expanded images receive independent reference order keys
 
     const groupLLMInputs = getLLMInputs(
   'llm-target',
@@ -478,11 +466,7 @@ const countBySeries = (series: 'G' | 'R' | 'C') => IMAGE_MODEL_REGISTRY.filter((
   ] as never,
   ''
     )
-    expect(
-  groupLLMInputs.imageInputs.join(','),
-  'url-group-left,url-group-right,url-group-gen-1,url-group-gen-2',
-  'llm expands group image collections into image inputs'
-    )
+    expect(groupLLMInputs.imageInputs.join(',')).toBe('url-group-left,url-group-right,url-group-gen-1,url-group-gen-2') // llm expands group image collections into image inputs
 
     const productAnalysisData = {
   ...createDefaultProductAnalysisNodeData(1),
@@ -508,26 +492,10 @@ const countBySeries = (series: 'G' | 'R' | 'C') => IMAGE_MODEL_REGISTRY.filter((
   messages: [{ role: 'user', content: 'hello' }],
     })
     expect(geminiLLMPayload.model).toBe('G-gemini-3.1-pro') // Gemini LLM backend model must use G-gemini-3.1-pro
-    expect(
-  extractLLMResponseContent({ choices: [{ message: { content: [{ type: 'text', text: 'content parts text' }] } }] }),
-  'content parts text',
-  'llm parser reads OpenAI content parts arrays'
-    )
-    expect(
-  extractLLMResponseContent({ choices: [{ text: 'legacy choice text' }] }),
-  'legacy choice text',
-  'llm parser reads choices[0].text fallback'
-    )
-    expect(
-  extractLLMResponseContent({ output: [{ type: 'message', content: [{ type: 'output_text', text: 'responses output text' }] }] }),
-  'responses output text',
-  'llm parser reads responses-style output content'
-    )
-    expect(
-  extractLLMResponseContent({ candidates: [{ content: { parts: [{ text: 'gemini candidate text' }] } }] }),
-  'gemini candidate text',
-  'llm parser reads gemini candidate text'
-    )
+    expect(extractLLMResponseContent({ choices: [{ message: { content: [{ type: 'text', text: 'content parts text' }] } }] })).toBe('content parts text') // llm parser reads OpenAI content parts arrays
+    expect(extractLLMResponseContent({ choices: [{ text: 'legacy choice text' }] })).toBe('legacy choice text') // llm parser reads choices[0].text fallback
+    expect(extractLLMResponseContent({ output: [{ type: 'message', content: [{ type: 'output_text', text: 'responses output text' }] }] })).toBe('responses output text') // llm parser reads responses-style output content
+    expect(extractLLMResponseContent({ candidates: [{ content: { parts: [{ text: 'gemini candidate text' }] } }] })).toBe('gemini candidate text') // llm parser reads gemini candidate text
     const productAnalysisPrompt = buildProductAnalysisPrompt(productAnalysisData, '上游信息：支持一机多用')
     expect(productAnalysisPrompt.includes('你必须只返回一个 JSON 对象。')).toBeTruthy() // product analysis prompt requires json-only output
     expect(productAnalysisPrompt.includes('【电商风格】')).toBeTruthy() // product analysis prompt includes commerce style section
@@ -561,60 +529,42 @@ const countBySeries = (series: 'G' | 'R' | 'C') => IMAGE_MODEL_REGISTRY.filter((
     expect(formattedProductAnalysis.includes('【产品卖点分析】')).toBeTruthy() // product analysis formatter includes title
     expect(formattedProductAnalysis.includes('【5页页面规划】')).toBeTruthy() // product analysis formatter includes selected page count
     expect(formattedProductAnalysis.includes('【图片生成提示词】')).toBeTruthy() // product analysis formatter includes image prompt section
-    expect(
-  isConnectionAllowed({
+    expect(isConnectionAllowed({
     sourceType: 'text',
     sourceHandle: 'prompt',
     targetType: 'product_analysis',
     targetHandle: 'product_info_input',
-  }),
-  'text output can connect to product analysis input'
-    )
-    expect(
-  isConnectionAllowed({
+  })).toBeTruthy() // text output can connect to product analysis input
+    expect(isConnectionAllowed({
     sourceType: 'llm',
     sourceHandle: 'llm_output',
     targetType: 'product_analysis',
     targetHandle: 'product_info_input',
-  }),
-  'llm output can connect to product analysis input'
-    )
-    expect(
-  isConnectionAllowed({
+  })).toBeTruthy() // llm output can connect to product analysis input
+    expect(isConnectionAllowed({
     sourceType: 'image_asset',
     sourceHandle: 'image_output',
     targetType: 'product_analysis',
     targetHandle: 'image_input',
-  }),
-  'image output can connect to product analysis image input'
-    )
-    expect(
-  isConnectionAllowed({
+  })).toBeTruthy() // image output can connect to product analysis image input
+    expect(isConnectionAllowed({
     sourceType: 'product_analysis',
     sourceHandle: 'analysis_result_output',
     targetType: 'llm',
     targetHandle: 'text_input',
-  }),
-  'product analysis result output can connect to llm text input'
-    )
-    expect(
-  isConnectionAllowed({
+  })).toBeTruthy() // product analysis result output can connect to llm text input
+    expect(isConnectionAllowed({
     sourceType: 'product_analysis',
     sourceHandle: 'analysis_result_output',
     targetType: 'text',
     targetHandle: 'llm_input',
-  }),
-  'product analysis result output can connect to text input'
-    )
-    expect(
-  !isConnectionAllowed({
+  })).toBeTruthy() // product analysis result output can connect to text input
+    expect(!isConnectionAllowed({
     sourceType: 'product_analysis',
     sourceHandle: 'analysis_result_output',
     targetType: 'image_gen',
     targetHandle: 'prompt',
-  }),
-  'product analysis must not connect directly to image generation'
-    )
+  })).toBeTruthy() // product analysis must not connect directly to image generation
 
     const productAnalysisInputs = getProductAnalysisInputs(
   'analysis',
@@ -682,10 +632,10 @@ const countBySeries = (series: 'G' | 'R' | 'C') => IMAGE_MODEL_REGISTRY.filter((
     )
     expect(productAnalysisInputs.connectedInputTextNodeCount).toBe(2) // product analysis counts connected upstream text inputs
     expect(productAnalysisInputs.connectedInputImageNodeCount).toBe(1) // product analysis counts connected upstream image inputs
-    expect(productAnalysisInputs.imageInputs.join(','), 'url-product-image', 'product analysis reads connected image node input')
+    expect(productAnalysisInputs.imageInputs.join(',')).toBe('url-product-image') // product analysis reads connected image node input
     expect(productAnalysisInputs.inputText.includes('补充说明：适合送礼')).toBeTruthy() // product analysis reads text node input
     expect(productAnalysisInputs.inputText.includes('竞品洞察：强调恒温稳定')).toBeTruthy() // product analysis reads llm node output
-    expect(productAnalysisInputs.connectedOutputTextNodeIds.join(','), 'analysis-output-text', 'product analysis detects downstream text nodes')
+    expect(productAnalysisInputs.connectedOutputTextNodeIds.join(',')).toBe('analysis-output-text') // product analysis detects downstream text nodes
 
     const productAnalysisLLMInputs = getLLMInputs(
   'llm-product',

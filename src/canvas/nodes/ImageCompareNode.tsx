@@ -1,6 +1,6 @@
 import React, { useCallback, useMemo, useState, useRef } from 'react'
 import type { NodeProps, Node, Edge } from '@xyflow/react'
-import { GripVertical } from 'lucide-react'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { NodeShell } from '../../components/NodeShell'
 import { PortLabel } from '../../components/PortLabel'
 import { useNodeStore } from '../../store/nodeStore'
@@ -8,9 +8,11 @@ import { useEdgeStore } from '../../store/edgeStore'
 import type { ImageCompareNodeData, CanvasNodeData, ImageAssetNodeData, ImageGenNodeData, ResultImageNodeData } from '../nodeTypes'
 import { useI18n } from '../../i18n/useI18n'
 import { resolveGroupImageOutputs, IMAGE_COLLECTION_OUTPUT_HANDLE } from '../groupImageOutputs'
+import { getImageSourceSet } from '../imageSourceUtils'
 
 type InputImage = {
   imageUrl: string
+  thumbnailUrl: string
   sourceNodeId: string
   edgeIndex: number
   naturalWidth?: number
@@ -18,19 +20,11 @@ type InputImage = {
 }
 
 function getImageUrl(data: CanvasNodeData): string | undefined {
-  if (data.nodeType === 'image_asset') {
-    const d = data as ImageAssetNodeData
-    return d.imageUrl || d.originalImageUrl || d.downloadUrl
-  }
-  if (data.nodeType === 'result_image') {
-    const d = data as ResultImageNodeData
-    return d.imageUrl || d.originalImageUrl || d.downloadUrl
-  }
-  if (data.nodeType === 'image_gen') {
-    const d = data as ImageGenNodeData
-    return d.lastGeneratedImageUrl || d.lastOutputImageUrls?.[0]
-  }
-  return undefined
+  return getImageSourceSet(data).payloadUrl
+}
+
+function getThumbnailUrl(data: CanvasNodeData): string | undefined {
+  return getImageSourceSet(data).thumbnailUrl
 }
 
 function resolveInputImages(
@@ -60,6 +54,7 @@ function resolveInputImages(
     ) {
       const imageUrl = getImageUrl(sourceData)
       if (imageUrl) {
+        const thumbnailUrl = getThumbnailUrl(sourceData) ?? imageUrl
         let naturalWidth: number | undefined
         let naturalHeight: number | undefined
 
@@ -79,6 +74,7 @@ function resolveInputImages(
 
         results.push({
           imageUrl,
+          thumbnailUrl,
           sourceNodeId: sourceNode.id,
           edgeIndex,
           naturalWidth,
@@ -89,7 +85,8 @@ function resolveInputImages(
       const groupImages = resolveGroupImageOutputs(sourceNode.id, nodes, edges)
       for (const image of groupImages) {
         results.push({
-          imageUrl: image.imageUrl,
+          imageUrl: image.displayUrl ?? image.payloadUrl ?? image.imageUrl,
+          thumbnailUrl: image.thumbnailUrl ?? image.imageUrl,
           sourceNodeId: image.sourceNodeId,
           edgeIndex,
           naturalWidth: image.width,
@@ -253,10 +250,16 @@ export const ImageCompareNodeComponent = React.memo(function ImageCompareNodeCom
             style={{ left: `${sliderPercent}%` }}
           />
           <div
-            className="image-compare-handle"
+            className="image-compare-handle image-compare-handle-arrow"
             style={{ left: `${sliderPercent}%` }}
+            aria-label="拖动对比图片"
+            role="slider"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={Math.round(sliderPercent)}
           >
-            <GripVertical size={16} />
+            <ChevronLeft size={15} strokeWidth={2.2} />
+            <ChevronRight size={15} strokeWidth={2.2} />
           </div>
         </div>
         {inputImages.length >= 3 && (
@@ -272,7 +275,7 @@ export const ImageCompareNodeComponent = React.memo(function ImageCompareNodeCom
                     onClick={(e) => handleThumbClick(index, e.altKey)}
                     title={t('imageCompare.tip')}
                   >
-                    <img src={img.imageUrl} alt={`thumb-${index}`} />
+                    <img src={img.thumbnailUrl} alt={`thumb-${index}`} />
                     {isLeft && (
                       <div className="image-compare-thumb-badge">A</div>
                     )}

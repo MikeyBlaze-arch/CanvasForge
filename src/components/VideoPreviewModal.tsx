@@ -2,6 +2,8 @@ import React, { useEffect, useMemo } from 'react'
 import { X } from 'lucide-react'
 import { Modal } from './Modal'
 import { useI18n } from '../i18n/useI18n'
+import { useViewportSize } from '../hooks/useViewportSize'
+import { calcMediaFitSize } from '../utils/mediaFit'
 
 type Props = {
   open: boolean
@@ -11,41 +13,6 @@ type Props = {
   height?: number
   duration?: number
   onClose: () => void
-}
-
-function getVideoPreviewSize(width?: number, height?: number) {
-  if (typeof window === 'undefined') return { width: 720, height: 405 }
-
-  const maxModalWidth = Math.min(window.innerWidth * 0.86, 1100)
-  const maxModalHeight = window.innerHeight * 0.86
-  const chromeHeight = 76
-  const maxVideoHeight = Math.max(240, maxModalHeight - chromeHeight)
-  const hasValidSize =
-    width != null &&
-    height != null &&
-    Number.isFinite(width) &&
-    Number.isFinite(height) &&
-    width > 0 &&
-    height > 0
-  const aspectRatio = hasValidSize ? width / height : 16 / 9
-
-  let videoWidth = maxModalWidth
-  let videoHeight = videoWidth / aspectRatio
-
-  if (videoHeight > maxVideoHeight) {
-    videoHeight = maxVideoHeight
-    videoWidth = videoHeight * aspectRatio
-  }
-
-  videoWidth = Math.max(220, videoWidth)
-  videoHeight = Math.max(160, videoHeight)
-  videoWidth = Math.min(videoWidth, maxModalWidth)
-  videoHeight = Math.min(videoHeight, maxVideoHeight)
-
-  return {
-    width: Math.round(videoWidth),
-    height: Math.round(videoHeight),
-  }
 }
 
 function formatDuration(duration?: number): string {
@@ -59,10 +26,24 @@ function formatDuration(duration?: number): string {
 
 export function VideoPreviewModal({ open, videoUrl, filename, width, height, duration, onClose }: Props) {
   const { t } = useI18n()
+  const viewport = useViewportSize()
   const size = useMemo(() => {
     if (!open) return null
-    return getVideoPreviewSize(width, height)
-  }, [open, width, height])
+    return calcMediaFitSize({
+      mediaWidth: width,
+      mediaHeight: height,
+      viewportWidth: viewport.width,
+      viewportHeight: viewport.height,
+      horizontalPadding: 48,
+      verticalPadding: 48,
+      reservedChromeHeight: 92,
+      maxWidthRatio: 0.96,
+      maxHeightRatio: 0.94,
+      fallbackAspectRatio: 16 / 9,
+      minWidth: 320,
+      minHeight: 180,
+    })
+  }, [height, open, viewport.height, viewport.width, width])
 
   useEffect(() => {
     if (!open) return
@@ -97,30 +78,32 @@ export function VideoPreviewModal({ open, videoUrl, filename, width, height, dur
   }
 
   return (
-    <Modal open={open} onClose={onClose} className="video-preview-shell">
-      <div className="video-preview-modal nodrag nopan nowheel" style={{ width: size.width }}>
-        <div className="video-preview-header">
-          <span>{filename || t('video.preview.title')}</span>
-          <button type="button" className="video-preview-close" onClick={onClose} aria-label={t('video.preview.close')}>
+    <Modal open={open} onClose={onClose} className="media-preview-shell">
+      <div className="media-preview-modal video-preview-modal nodrag nopan nowheel" style={{ width: size.width }}>
+        <div className="media-preview-toolbar video-preview-header">
+          <span className="media-preview-title" title={filename || t('preview.videoTitle')}>{filename || t('preview.videoTitle')}</span>
+          <button type="button" className="media-preview-btn video-preview-close" onClick={onClose} aria-label={t('preview.close')} title={t('preview.close')}>
             <X size={16} />
           </button>
         </div>
 
-        {videoUrl && (
-          <video
-            src={videoUrl}
-            controls
-            controlsList="nofullscreen"
-            autoPlay
-            playsInline
-            disablePictureInPicture
-            style={{ width: size.width, height: size.height, objectFit: 'contain', background: '#000' }}
-            onMouseDownCapture={stopRepeatedMouseDown}
-            onDoubleClickCapture={stopNativeVideoFullscreen}
-          />
-        )}
+        <div className="media-preview-stage" style={{ width: size.width, height: size.height }}>
+          {videoUrl && (
+            <video
+              src={videoUrl}
+              className="media-preview-video"
+              controls
+              controlsList="nofullscreen"
+              autoPlay
+              playsInline
+              disablePictureInPicture
+              onMouseDownCapture={stopRepeatedMouseDown}
+              onDoubleClickCapture={stopNativeVideoFullscreen}
+            />
+          )}
+        </div>
 
-        {meta && <div className="video-preview-meta">{meta}</div>}
+        <div className="media-preview-meta video-preview-meta">{meta || t('preview.fit')}</div>
       </div>
     </Modal>
   )

@@ -9,6 +9,11 @@ import { getImageModelConfig } from '../../generation/imageModelRegistry'
 import { calcThumbnailSize } from '../../utils/imageDimensions'
 import { downloadImage } from '../../utils/downloadImage'
 import { useI18n } from '../../i18n/useI18n'
+import { getImageSourceUrl } from '../imageSourceUtils'
+import { useUIStore } from '../../store/uiStore'
+import { ImagePreviewModal } from '../../components/ImagePreviewModal'
+
+const HIGH_RES_PREVIEW_ZOOM = 1.35
 
 export const ResultImageNodeComponent = React.memo(function ResultImageNodeComponent({ id, data, selected }: NodeProps) {
   const d = data as unknown as ResultImageNodeData
@@ -16,11 +21,20 @@ export const ResultImageNodeComponent = React.memo(function ResultImageNodeCompo
   const addNode = useNodeStore((s) => s.addNode)
   const nodes = useNodeStore((s) => s.nodes)
   const [hovered, setHovered] = useState(false)
+  const [previewOpen, setPreviewOpen] = useState(false)
   const { t } = useI18n()
+  const viewportZoom = useUIStore((s) => s.viewportZoom)
 
   const thumb = d.naturalWidth && d.naturalHeight
     ? calcThumbnailSize(d.naturalWidth, d.naturalHeight)
     : { width: 280, height: 210 }
+  const previewImageUrl = getImageSourceUrl(d, 'display', {
+    zoom: viewportZoom,
+    cssWidth: thumb.width,
+    cssHeight: thumb.height,
+    zoomSwitchThreshold: HIGH_RES_PREVIEW_ZOOM,
+  })
+  const zoomedImageUrl = getImageSourceUrl(d, 'download') ?? previewImageUrl
 
   const handleDownload = useCallback(() => {
     downloadImage(d).catch((err) => {
@@ -28,37 +42,12 @@ export const ResultImageNodeComponent = React.memo(function ResultImageNodeCompo
     })
   }, [d])
 
-  const handleDoubleClick = useCallback(() => {
-    if (!d.imageUrl) return
-    const existing = document.getElementById('cf-image-preview-overlay')
-    if (existing) existing.remove()
-
-    const overlay = document.createElement('div')
-    overlay.id = 'cf-image-preview-overlay'
-    overlay.style.cssText = [
-      'position:fixed;inset:0;z-index:9999;',
-      'display:flex;align-items:center;justify-content:center;',
-      'background:rgba(0,0,0,0.85);',
-      'cursor:pointer;',
-    ].join('')
-    overlay.onclick = () => overlay.remove()
-
-    const img = document.createElement('img')
-    img.src = d.imageUrl
-    img.alt = 'preview'
-    img.style.cssText = [
-      'max-width:90vw;max-height:85vh;object-fit:contain;',
-      'border-radius:8px;box-shadow:0 8px 32px rgba(0,0,0,0.5);',
-    ].join('')
-    img.onclick = (e) => e.stopPropagation()
-    overlay.appendChild(img)
-    document.body.appendChild(overlay)
-
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') { overlay.remove(); document.removeEventListener('keydown', onKey) }
-    }
-    document.addEventListener('keydown', onKey)
-  }, [d])
+  const handleDoubleClick = useCallback((event: React.MouseEvent) => {
+    if (!zoomedImageUrl) return
+    event.preventDefault()
+    event.stopPropagation()
+    setPreviewOpen(true)
+  }, [zoomedImageUrl])
 
   return (
     <NodeShell nodeType="result_image" title={t('node.result')} selected={!!selected} width={thumb.width}>
@@ -69,7 +58,7 @@ export const ResultImageNodeComponent = React.memo(function ResultImageNodeCompo
           onMouseLeave={() => setHovered(false)}
           onDoubleClick={handleDoubleClick}
         >
-          <img src={d.imageUrl} alt="result" decoding="async" loading="lazy" />
+          <img src={previewImageUrl} alt="result" decoding="async" loading="lazy" />
           {hovered && (
             <div className="image-node-overlay">
               <button className="image-node-overlay-btn" onClick={() => {
@@ -85,6 +74,8 @@ export const ResultImageNodeComponent = React.memo(function ResultImageNodeCompo
                     nodeType: 'image_asset',
                     title: t('result.titleFromResult'),
                     imageUrl: d.imageUrl,
+                    originalImageUrl: d.originalImageUrl || d.downloadUrl || d.imageUrl,
+                    downloadUrl: d.downloadUrl || d.originalImageUrl || d.imageUrl,
                     naturalWidth: d.naturalWidth,
                     naturalHeight: d.naturalHeight,
                     previewWidth: imgThumb.width,
@@ -112,6 +103,16 @@ export const ResultImageNodeComponent = React.memo(function ResultImageNodeCompo
         <span className="history-card-pill">{d.aspectRatio}</span>
         <span className="history-card-pill">{d.resolution}</span>
       </div>
+
+      <ImagePreviewModal
+        open={previewOpen}
+        imageUrl={zoomedImageUrl}
+        filename="result"
+        width={d.naturalWidth}
+        height={d.naturalHeight}
+        onClose={() => setPreviewOpen(false)}
+        onDownload={handleDownload}
+      />
 
       {/* Handles - main handles visible, semantic handles invisible */}
       <div className="node-ports">

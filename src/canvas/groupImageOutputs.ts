@@ -6,6 +6,7 @@ import type {
   ImageGenNodeData,
   ResultImageNodeData,
 } from './nodeTypes'
+import { getImageSourceSet } from './imageSourceUtils'
 
 export const IMAGE_COLLECTION_OUTPUT_HANDLE = 'image_collection_output'
 export const IMAGE_COLLECTION_OUTPUT_TYPE = 'image_collection'
@@ -16,6 +17,11 @@ export type GroupImageOutput = {
   groupNodeId: string
   sourceNodeId: string
   imageUrl: string
+  thumbnailUrl?: string
+  displayUrl?: string
+  originalImageUrl?: string
+  downloadUrl?: string
+  payloadUrl?: string
   label?: string
   sourceType: 'image_asset' | 'result_image' | 'image_gen'
   width?: number
@@ -40,21 +46,6 @@ function uniqueUrls(urls: Array<string | undefined>): string[] {
     result.push(url)
   }
   return result
-}
-
-function extractImageUrlsFromAsset(data: ImageAssetNodeData | ResultImageNodeData): string[] {
-  const extra = data as Record<string, unknown>
-  const imageUrl = [
-    normalizeImageUrl(data.imageUrl),
-    normalizeImageUrl(extra.url),
-    normalizeImageUrl(extra.src),
-    normalizeImageUrl(extra.dataUrl),
-    normalizeImageUrl(extra.outputUrl),
-    normalizeImageUrl(extra.outputImageUrl),
-    normalizeImageUrl(extra.originalImageUrl),
-    normalizeImageUrl(extra.downloadUrl),
-  ].find(Boolean)
-  return imageUrl ? [imageUrl] : []
 }
 
 function extractImageUrlsFromImageGen(data: ImageGenNodeData): string[] {
@@ -93,29 +84,45 @@ function extractImageOutputsFromNode(
   const data = getNodeData(node)
 
   if (data.nodeType === 'image_asset') {
-    return extractImageUrlsFromAsset(data).map((imageUrl, index) => ({
+    const sources = getImageSourceSet(data)
+    const imageUrl = sources.displayUrl
+    if (!imageUrl) return []
+    return [{
       groupNodeId,
       sourceNodeId: node.id,
       imageUrl,
+      thumbnailUrl: sources.thumbnailUrl,
+      displayUrl: sources.displayZoomedUrl,
+      originalImageUrl: sources.originalImageUrl,
+      downloadUrl: sources.downloadUrl,
+      payloadUrl: sources.payloadUrl,
       label: data.title,
       sourceType: 'image_asset',
       width: data.naturalWidth,
       height: data.naturalHeight,
-      index,
-    }))
+      index: 0,
+    }]
   }
 
   if (data.nodeType === 'result_image') {
-    return extractImageUrlsFromAsset(data).map((imageUrl, index) => ({
+    const sources = getImageSourceSet(data)
+    const imageUrl = sources.displayUrl
+    if (!imageUrl) return []
+    return [{
       groupNodeId,
       sourceNodeId: node.id,
       imageUrl,
+      thumbnailUrl: sources.thumbnailUrl,
+      displayUrl: sources.displayZoomedUrl,
+      originalImageUrl: sources.originalImageUrl,
+      downloadUrl: sources.downloadUrl,
+      payloadUrl: sources.payloadUrl,
       label: data.title,
       sourceType: 'result_image',
       width: data.naturalWidth,
       height: data.naturalHeight,
-      index,
-    }))
+      index: 0,
+    }]
   }
 
   if (data.nodeType === 'image_gen') {
